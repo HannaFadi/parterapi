@@ -158,10 +158,15 @@
     const key = group.dataset.pick;
     const chosen = store.get(key, '');
     const cards = Array.from(group.querySelectorAll('.pick'));
-    cards.forEach(c => c.classList.toggle('on', c.dataset.v === chosen));
+    cards.forEach(c => {
+      const on = c.dataset.v === chosen;
+      c.classList.toggle('on', on);
+      c.setAttribute('aria-pressed', String(on));
+    });
     function pick(el) {
-      cards.forEach(c => c.classList.remove('on'));
+      cards.forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
       el.classList.add('on');
+      el.setAttribute('aria-pressed', 'true');
       store.set(key, el.dataset.v);
       flagSaved();
     }
@@ -281,10 +286,17 @@
 
   document.querySelectorAll('[data-clear]').forEach(b => {
     b.addEventListener('click', () => {
-      if (!confirm('Rensa det ni skrivit i övningarna? Det går inte att ångra.')) return;
-      store.keys().forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
-      document.querySelectorAll('[data-save]').forEach(el => { el.value = ''; grow(el); });
-      document.querySelectorAll('.pick').forEach(p => p.classList.remove('on'));
+      if (!confirm('Rensa det ni skrivit på den här sidan? Det går inte att ångra.')) return;
+      // Rör bara fälten som finns på den här sidan — övriga övningar lämnas orörda
+      document.querySelectorAll('[data-save]').forEach(el => {
+        try { localStorage.removeItem(PREFIX + el.dataset.save); } catch (e) {}
+        el.value = ''; grow(el);
+      });
+      document.querySelectorAll('[data-pick]').forEach(g => {
+        try { localStorage.removeItem(PREFIX + g.dataset.pick); } catch (e) {}
+      });
+      document.querySelectorAll('.pick').forEach(p => { p.classList.remove('on'); p.setAttribute('aria-pressed', 'false'); });
+      if (tradHost) { try { localStorage.removeItem(PREFIX + 'mittTrad'); } catch (e) {} }
       if (tradHost) { tradState = { me: {}, partner: {} }; tradLoad(); tradRender(); }
       updateCounts();
       notes.forEach(n => { n.textContent = 'Rensat.'; n.classList.remove('saved'); });

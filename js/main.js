@@ -5,9 +5,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggle = document.querySelector('.nav-toggle');
   const links = document.querySelector('.nav-links');
   if (toggle && links) {
-    toggle.addEventListener('click', () => {
-      const open = links.classList.toggle('open');
+    if (!links.id) links.id = 'huvudmeny';
+    toggle.setAttribute('aria-controls', links.id);
+
+    const setOpen = open => {
+      links.classList.toggle('open', open);
       toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Stäng menyn' : 'Meny');
+    };
+    setOpen(false);
+
+    toggle.addEventListener('click', () => setOpen(!links.classList.contains('open')));
+
+    // Escape stänger och lämnar tillbaka fokus till knappen
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && links.classList.contains('open')) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+
+    // Klick utanför menyn stänger den
+    document.addEventListener('click', e => {
+      if (!links.classList.contains('open')) return;
+      if (!links.contains(e.target) && !toggle.contains(e.target)) setOpen(false);
+    });
+
+    // Följ en länk = stäng menyn
+    links.addEventListener('click', e => {
+      if (e.target.closest('a')) setOpen(false);
     });
   }
 

@@ -1,5 +1,5 @@
 // Kärleksspråk-quiz: 10 parvisa val, alla 10 kombinationer av de 5 språken.
-// Fritt inspirerat av Gary Chapmans "The 5 Love Languages".
+// Fritt inspirerat av Gary Chapmans ”The 5 Love Languages”.
 
 (function () {
   const root = document.getElementById('quizLove');
@@ -15,11 +15,11 @@
 
   const RESULTS = {
     ord: {
-      desc: 'Du känner dig som mest älskad när kärleken sätts i ord: uppskattning, uppmuntran och ärliga komplimanger. Ett "vad fint du gjorde det där" kan bära dig genom en hel vecka — medan hårda eller slarviga ord sårar dig djupare än de flesta anar.',
+      desc: 'Du känner dig som mest älskad när kärleken sätts i ord: uppskattning, uppmuntran och ärliga komplimanger. Ett ”vad fint du gjorde det där” kan bära dig genom en hel vecka — medan hårda eller slarviga ord sårar dig djupare än de flesta anar.',
       tips: [
         'Säg uppskattningen högt — även för små saker, och gärna ofta.',
         'Skriv en lapp, ett sms eller några rader i ett kort — skrivna ord går att spara.',
-        'Var konkret: "Jag älskar hur du fick alla att skratta ikväll" slår "du är bra".',
+        'Var konkret: ”Jag älskar hur du fick alla att skratta ikväll” slår ”du är bra”.',
         'Var extra varsam i konflikter — sarkasm och hårda ord dröjer sig kvar länge.'
       ]
     },
@@ -28,25 +28,25 @@
       tips: [
         'Boka in regelbunden tid på tu man hand — och skydda den som ett viktigt möte.',
         'Lägg undan mobilen vid samtal och måltider. Odelad uppmärksamhet är själva poängen.',
-        'Ställ följdfrågor och lyssna färdigt — det säger "du är viktig för mig".',
+        'Ställ följdfrågor och lyssna färdigt — det säger ”du är viktig för mig”.',
         'Små ritualer räknas: morgonkaffet ihop, kvällspromenaden, söndagsfrukosten.'
       ]
     },
     gavor: {
-      desc: 'Du känner dig som mest älskad genom omtänksamma gåvor — inte för värdet, utan för vad de betyder: "jag tänkte på dig när vi inte var tillsammans." En blomma på vägen hem eller din favoritchoklad i väskan säger mer än tusen ord.',
+      desc: 'Du känner dig som mest älskad genom omtänksamma gåvor — inte för värdet, utan för vad de betyder: ”jag tänkte på dig när vi inte var tillsammans.” En blomma på vägen hem eller din favoritchoklad i väskan säger mer än tusen ord.',
       tips: [
         'Det är tanken som räknas: små, personliga gåvor slår dyra opersonliga.',
         'Notera saker partnern nämner i förbifarten — och överraska senare.',
         'Fira märkesdagar; glömda födelsedagar och årsdagar sårar extra mycket.',
-        'En "gåva" kan också vara att spara något: en biljett, ett snäckskal, ett minne.'
+        'En ”gåva” kan också vara att spara något: en biljett, ett snäckskal, ett minne.'
       ]
     },
     tjanster: {
-      desc: 'Du känner dig som mest älskad när kärlek omsätts i handling: när partnern lagar middagen, tar hand om det du gruvat dig för eller bara ser vad som behöver göras — utan att du behöver be. För dig är "låt mig hjälpa dig" den finaste kärleksförklaringen.',
+      desc: 'Du känner dig som mest älskad när kärlek omsätts i handling: när partnern lagar middagen, tar hand om det du gruvat dig för eller bara ser vad som behöver göras — utan att du behöver be. För dig är ”låt mig hjälpa dig” den finaste kärleksförklaringen.',
       tips: [
         'Se vad som tynger — och gör det, utan att vänta på en önskelista.',
         'Följ upp det du lovat; brutna löften talar det här språket baklänges.',
-        'Fråga: "Vad kan jag ta över den här veckan?" och mena det.',
+        'Fråga: ”Vad kan jag ta över den här veckan?” och mena det.',
         'Små handlingar i vardagen väger tyngre än stora engångsinsatser.'
       ]
     },
@@ -123,13 +123,13 @@
           <div class="result-bar-row${v === max ? ' top' : ''}">
             <span>${LANGS[k].emoji} ${LANGS[k].name}</span>
             <div class="result-bar-track"><div class="result-bar-fill" data-w="${Math.round((v / total) * 100)}"></div></div>
-            <span class="pct">${Math.round((v / total) * 100)}%</span>
+            <span class="pct">${Math.round((v / total) * 100)}&nbsp;%</span>
           </div>`).join('')}
       </div>
 
       ${winners.map(k => `
         <div class="quiz-tips">
-          <h4>Så bemöter din partner ${LANGS[k].name.toLowerCase()} ${LANGS[k].emoji}</h4>
+          <h4>Så visar du din partner ${LANGS[k].name.toLowerCase()} ${LANGS[k].emoji}</h4>
           <ul>${RESULTS[k].tips.map(t => `<li>${t}</li>`).join('')}</ul>
         </div>`).join('')}
 
