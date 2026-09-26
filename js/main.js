@@ -37,10 +37,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Mark current page in nav
-  const here = location.pathname.split('/').pop() || 'index.html';
+  // Markera aktuell sida i menyn.
+  // Sidorna serveras utan .html, men fungerar med ändelsen också, så
+  // normalisera båda formerna innan de jämförs.
+  const norm = p => p.replace(/\/index\.html$/, '/').replace(/\.html$/, '').replace(/(.)\/$/, '$1') || '/';
+  const here = norm(location.pathname);
   document.querySelectorAll('.nav-links a').forEach(a => {
-    if (a.getAttribute('href') === here) a.setAttribute('aria-current', 'page');
+    const href = a.getAttribute('href');
+    if (!href || /^(https?:|mailto:|tel:|#)/i.test(href)) return;
+    if (norm(new URL(href, location.href).pathname) === here) {
+      a.setAttribute('aria-current', 'page');
+    }
   });
 
   // Scroll reveal

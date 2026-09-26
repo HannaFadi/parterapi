@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://hannafadi.github.io/parterapi/sitemap.xml
+Sitemap: https://mariehanna.se/sitemap.xml

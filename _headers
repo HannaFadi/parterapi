@@ -1,0 +1,16 @@
+# Svarsrubriker för Cloudflare Pages.
+# Pages sätter redan Referrer-Policy, X-Content-Type-Options och Etag,
+# och sköter cachningen själv. Rör inte Cache-Control här: enligt
+# Cloudflares egen dokumentation kan egen cachning ge gammalt innehåll
+# efter en ny driftsättning.
+
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: SAMEORIGIN
+  Cross-Origin-Opener-Policy: same-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
+  # script-src tillåter 'unsafe-inline' därför att sidorna har två sorters
+  # inbäddad kod: js-flaggan i <head> och JSON-LD för sökmotorerna. Hashar
+  # hade varit strängare men går sönder tyst varje gång schemat redigeras.
+  # 'self' + inline blockerar fortfarande all inlästa skript utifrån.
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; upgrade-insecure-requests
