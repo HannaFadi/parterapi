@@ -758,3 +758,302 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
   .cta-band { padding: 44px 24px; }
   section { padding: 56px 0; }
 }
+
+/* ============================================================
+   Övningshäfte — "Blomstra upp som par"
+   Allt prefixat .hafte-/.ex-/.temp-/.write så övriga sidor inte påverkas.
+   ============================================================ */
+
+/* ---------- Ryggraden: spegeln » fönstret » bron ---------- */
+.spine { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 8px; }
+.spine-step {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 22px 22px 20px;
+  position: relative;
+}
+.spine-step .spine-emoji { font-size: 1.7rem; display: block; margin-bottom: 10px; }
+.spine-step h3 { font-size: 1.1rem; margin-bottom: 6px; }
+.spine-step p { font-size: 0.92rem; margin: 0; }
+.spine-step::after {
+  content: "»";
+  position: absolute; right: -14px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent); font-size: 1.3rem; font-weight: 600;
+}
+.spine-step:last-child::after { content: none; }
+
+/* ---------- Innehållsmeny (klistrad under navbaren) ---------- */
+.hafte-toc {
+  position: sticky; top: 64px; z-index: 40;
+  background: rgba(250, 246, 240, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+}
+.hafte-toc-inner {
+  max-width: var(--maxw); margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; gap: 8px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.hafte-toc-inner::-webkit-scrollbar { display: none; }
+.hafte-toc a {
+  flex-shrink: 0;
+  font-size: 0.84rem; font-weight: 600; color: var(--ink-soft);
+  padding: 7px 14px; border-radius: 999px; border: 1px solid transparent;
+  white-space: nowrap;
+}
+.hafte-toc a:hover { background: var(--bg-alt); color: var(--ink); }
+.hafte-toc a.here { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
+
+/* ---------- Delrubrik ---------- */
+.part-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.part-emoji { font-size: 2.4rem; line-height: 1; }
+.part-num {
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ---------- Teoriblock ---------- */
+.beat { max-width: 44em; margin: 0 0 34px; }
+.beat h3 { margin-bottom: 10px; display: flex; gap: 10px; align-items: baseline; }
+.beat p { margin-bottom: 14px; }
+.beat p:last-child { margin-bottom: 0; }
+.beat ul, .beat ol { margin: 0 0 16px 24px; color: var(--ink-soft); font-size: 0.97rem; }
+.beat li { margin-bottom: 7px; }
+.beat li::marker { color: var(--accent); }
+.takeaway {
+  font-family: var(--font-display); font-weight: 550; font-size: 1.22rem;
+  line-height: 1.35; color: var(--ink);
+  border-left: 3px solid var(--accent); padding: 4px 0 4px 18px; margin: 18px 0;
+}
+
+/* Före/efter-exempel */
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; max-width: 44em; }
+.vs > div { border-radius: var(--radius-sm); padding: 20px 22px; font-size: 0.94rem; }
+.vs .vs-bad { background: var(--bg-alt); border: 1px solid var(--line); }
+.vs .vs-good { background: var(--sage-soft); border: 1px solid #CDD8C7; }
+.vs h4 { font-family: var(--font-body); font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; color: var(--ink-faint); }
+.vs em { color: var(--ink-faint); font-style: normal; font-size: 0.85rem; }
+
+/* Valfri trosdimension */
+.faith-note {
+  background: #FBF7EC; border: 1px dashed #DCCFA8; border-radius: var(--radius-sm);
+  padding: 16px 20px; margin: 18px 0; max-width: 44em; font-size: 0.92rem; color: var(--ink-soft);
+}
+.faith-note b { display: block; font-size: 0.76rem; letter-spacing: 0.12em; text-transform: uppercase; color: #9C8434; margin-bottom: 6px; font-weight: 700; }
+
+/* ---------- Övningskort ---------- */
+.ex {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 30px 32px 32px;
+  margin: 36px 0 44px;
+  box-shadow: var(--shadow-soft);
+}
+.ex-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+.ex-kicker { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.ex-head h3 { font-size: 1.45rem; width: 100%; margin-top: 2px; }
+.ex-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag {
+  font-size: 0.74rem; font-weight: 600; letter-spacing: 0.04em;
+  background: var(--bg-alt); color: var(--ink-soft);
+  border-radius: 999px; padding: 4px 11px;
+}
+.tag.out { background: var(--sage-soft); color: var(--sage); }
+.ex-why { font-size: 0.97rem; margin: 10px 0 20px; max-width: 42em; }
+.ex-steps { counter-reset: exstep; list-style: none; margin: 0 0 4px; }
+.ex-steps > li {
+  position: relative; padding-left: 40px; margin-bottom: 14px;
+  font-size: 0.96rem; color: var(--ink-soft);
+}
+.ex-steps > li::before {
+  counter-increment: exstep; content: counter(exstep);
+  position: absolute; left: 0; top: -1px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent-dark);
+  font-size: 0.8rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.ex-steps strong { color: var(--ink); }
+.ex-note { font-size: 0.88rem; color: var(--ink-faint); margin-top: 18px; }
+.ex-note strong { color: var(--ink-soft); }
+
+/* ---------- Skrivfält ---------- */
+.write { display: block; margin: 16px 0; }
+.write-label { display: block; font-size: 0.86rem; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.write-label .opt { font-weight: 400; color: var(--ink-faint); }
+.write textarea, .write input[type="text"], .write input[type="date"], .write input[type="time"] {
+  width: 100%; font-family: var(--font-body); font-size: 0.97rem; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px 14px; line-height: 1.55; transition: border-color 0.15s, background 0.15s;
+}
+.write textarea { resize: vertical; min-height: 56px; }
+.write textarea:focus, .write input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.write-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.write-num { display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 12px; margin-bottom: 10px; }
+.write-num span { font-family: var(--font-display); font-size: 1.05rem; color: var(--accent); text-align: right; }
+
+/* ---------- Ordbrickor (känslor & behov) ---------- */
+.chips-wrap { margin: 8px 0 18px; }
+.chips-label { font-size: 0.8rem; color: var(--ink-faint); margin-bottom: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip {
+  font-family: var(--font-body); font-size: 0.85rem; color: var(--ink-soft);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 13px; cursor: pointer; transition: all 0.15s;
+}
+.chip:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
+.chips.need .chip:hover { border-color: var(--sage); background: var(--sage-soft); color: var(--sage); }
+
+/* ---------- Timer ---------- */
+.timer {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  background: var(--bg-alt); border-radius: var(--radius-sm);
+  padding: 16px 20px; margin: 20px 0;
+}
+.timer-clock {
+  font-family: var(--font-display); font-size: 2rem; font-weight: 550;
+  font-variant-numeric: tabular-nums; color: var(--ink); min-width: 4.6em;
+  letter-spacing: -0.02em;
+}
+.timer.running .timer-clock { color: var(--accent); }
+.timer.done .timer-clock { color: var(--sage); }
+.timer-steps { display: flex; gap: 7px; flex-wrap: wrap; }
+.timer-step {
+  font-family: var(--font-body); font-size: 0.82rem; font-weight: 600;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 13px; cursor: pointer; color: var(--ink-soft);
+}
+.timer-step.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.timer-btns { display: flex; gap: 8px; margin-left: auto; }
+.timer-btn {
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 600;
+  background: var(--surface); border: 1px solid var(--ink-faint); color: var(--ink);
+  border-radius: 999px; padding: 7px 16px; cursor: pointer;
+}
+.timer-btn:hover { border-color: var(--accent); color: var(--accent-dark); }
+
+/* ---------- Temperamentstestet ---------- */
+.temp-switch { display: flex; gap: 6px; background: var(--bg-alt); border-radius: 999px; padding: 5px; width: fit-content; margin-bottom: 20px; }
+.temp-switch button {
+  font-family: var(--font-body); font-size: 0.88rem; font-weight: 600;
+  background: transparent; border: 0; color: var(--ink-soft);
+  border-radius: 999px; padding: 8px 20px; cursor: pointer;
+}
+.temp-switch button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-soft); }
+.temp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.temp-col { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px 16px 12px; }
+.temp-col h4 { font-family: var(--font-body); font-size: 0.86rem; margin-bottom: 12px; line-height: 1.3; }
+.temp-col h4 span { display: block; font-size: 1.3rem; margin-bottom: 4px; }
+.temp-item { display: flex; gap: 9px; align-items: flex-start; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 9px; cursor: pointer; line-height: 1.4; }
+.temp-item input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.temp-item input:checked + span { color: var(--ink); }
+.temp-sum {
+  margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line);
+  font-size: 0.82rem; font-weight: 600; color: var(--ink-faint);
+}
+.temp-sum b { font-family: var(--font-display); font-size: 1.15rem; color: var(--accent); }
+.temp-out { margin-top: 24px; }
+.temp-out-who { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px; }
+.temp-verdict { font-family: var(--font-display); font-size: 1.2rem; color: var(--ink); margin-bottom: 14px; }
+
+/* ---------- Ämneslista för sittplikten ---------- */
+.topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 18px 0; }
+.topic {
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 14px 16px; cursor: pointer; transition: all 0.15s;
+}
+.topic.on { border-color: var(--accent); background: var(--accent-soft); }
+.topic strong { display: block; font-size: 0.92rem; margin-bottom: 4px; color: var(--ink); }
+.topic span { font-size: 0.82rem; color: var(--ink-soft); }
+
+/* ---------- Verktygsrad: spara / skriv ut / rensa ---------- */
+.hafte-tools { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.save-note { font-size: 0.82rem; color: var(--ink-faint); }
+.save-note.saved { color: var(--sage); }
+.btn-ghost {
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 600;
+  background: transparent; border: 1px solid var(--line); color: var(--ink-soft);
+  border-radius: 999px; padding: 9px 18px; cursor: pointer;
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent-dark); }
+
+/* ---------- Responsivt ---------- */
+@media (max-width: 900px) {
+  .spine { grid-template-columns: 1fr; }
+  .spine-step::after { content: none; }
+  .temp-grid { grid-template-columns: repeat(2, 1fr); }
+  .vs { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .ex { padding: 24px 20px 26px; border-radius: var(--radius-sm); }
+  .temp-grid { grid-template-columns: 1fr; }
+  .write-grid { grid-template-columns: 1fr; }
+  .timer-btns { margin-left: 0; }
+  .timer-clock { font-size: 1.7rem; }
+  .part-emoji { font-size: 1.9rem; }
+}
+
+/* ---------- Utskrift / spara som PDF ---------- */
+@media print {
+  @page { size: A4; margin: 16mm 14mm; }
+  html { scroll-behavior: auto; }
+  body { background: #fff; font-size: 10.5pt; line-height: 1.5; }
+  .nav, .hafte-toc, footer, .cta-band, .hafte-tools, .timer, .temp-switch,
+  .noprint, .nav-toggle, .page-hero .hero-cta, .hero-note { display: none !important; }
+  section.alt { background: #fff !important; }
+  /* Dragspelen fälls ut — allt innehåll ska med på papper */
+  details.lang-detail { border-color: #ccc; }
+  details.lang-detail .detail-body { display: block !important; padding: 0 16px 14px; }
+  details.lang-detail summary { padding: 12px 16px 6px; }
+  details.lang-detail summary::after { content: none; }
+  /* Ordbrickorna blir en vanlig ordlista */
+  .chips-wrap { display: block; margin: 6pt 0 12pt; }
+  .chips-label { font-size: 8.5pt; }
+  .chip { border: 0 !important; background: none !important; padding: 0 !important; font-size: 9pt; color: #444; }
+  .chips { gap: 0 6px; }
+  .chips .chip::after { content: " ·"; color: #aaa; }
+  .chips .chip:last-child::after { content: none; }
+  #sentChips { display: block; }
+  #sentChips .chip { display: list-item; margin-left: 16pt; padding: 2pt 0 !important; }
+  #sentChips .chip::after { content: none; }
+  section { padding: 0 0 14pt !important; }
+  .wrap { max-width: none; padding: 0; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  a { color: var(--ink); }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8pt; color: #777; }
+  h1 { font-size: 22pt; }
+  h2 { font-size: 15pt; }
+  h3 { font-size: 11.5pt; }
+  .lede { font-size: 11pt; }
+  .page-hero { padding: 0 0 10pt; }
+  .part-head { break-after: avoid; }
+  .beat, .callout, .faith-note, .temp-col, .vs > div, details.lang-detail { break-inside: avoid; }
+  .ex {
+    border: 1px solid #bbb; border-left: 3pt solid #B85C38;
+    box-shadow: none; padding: 12pt 14pt; margin: 12pt 0 16pt;
+    break-inside: auto;
+  }
+  .ex-head, .ex-steps > li, .write, .write-num { break-inside: avoid; }
+  .part { break-before: page; }
+  /* Skrivfälten blir linjer att skriva på med penna */
+  .write textarea, .write input[type="text"], .write input[type="date"], .write input[type="time"] {
+    border: 0; border-bottom: 1px solid #999; border-radius: 0;
+    background: repeating-linear-gradient(transparent, transparent 21px, #ddd 21px, #ddd 22px);
+    min-height: 44px; padding: 2px 0;
+  }
+  .write input[type="date"], .write input[type="time"] { min-height: 22px; }
+  .write textarea::placeholder, .write input::placeholder { color: transparent; }
+  .temp-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .temp-col { background: #fff; border: 1px solid #ccc; padding: 8pt; }
+  .temp-item { font-size: 8.5pt; margin-bottom: 5pt; }
+  .temp-out { display: none; }
+  .temp-sum b { display: none; }
+  .temp-sum::after { content: " ________"; }
+  .print-only { display: block !important; }
+}
+.print-only { display: none; }
