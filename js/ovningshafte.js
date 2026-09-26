@@ -1,7 +1,7 @@
 /* ============================================================
-   Övningshäftet "Blomstra upp som par"
-   - sparar allt som skrivs i localStorage (aldrig till server)
-   - temperamentstest, timrar, ordbrickor, export & utskrift
+   Gemensam logik för de korta parövningarna.
+   Varje del aktiveras bara om sidan innehåller den.
+   Allt som skrivs sparas i localStorage — inget lämnar webbläsaren.
    ============================================================ */
 
 (function () {
@@ -12,7 +12,6 @@
       catch (e) { return fallback; }
     },
     set(k, v) { try { localStorage.setItem(PREFIX + k, v); } catch (e) {} },
-    del(k) { try { localStorage.removeItem(PREFIX + k); } catch (e) {} },
     keys() {
       try { return Object.keys(localStorage).filter(k => k.indexOf(PREFIX) === 0); }
       catch (e) { return []; }
@@ -20,14 +19,15 @@
   };
 
   /* ---------- Sparstatus ---------- */
-  const note = document.getElementById('saveNote');
+  const notes = Array.from(document.querySelectorAll('.save-note'));
   let noteTimer = null;
   function flagSaved() {
-    if (!note) return;
-    note.textContent = 'Sparat i din webbläsare ✓';
-    note.classList.add('saved');
+    if (!notes.length) return;
+    notes.forEach(n => { n.textContent = 'Sparat i din webbläsare ✓'; n.classList.add('saved'); });
     clearTimeout(noteTimer);
-    noteTimer = setTimeout(() => { note.textContent = ''; note.classList.remove('saved'); }, 2200);
+    noteTimer = setTimeout(() => {
+      notes.forEach(n => { n.textContent = ''; n.classList.remove('saved'); });
+    }, 2200);
   }
 
   /* ---------- Autosparade fält ---------- */
@@ -37,33 +37,30 @@
     el.style.height = (el.scrollHeight + 2) + 'px';
   }
 
-  const fields = Array.from(document.querySelectorAll('[data-save]'));
-  fields.forEach(el => {
+  document.querySelectorAll('[data-save]').forEach(el => {
     const saved = store.get(el.dataset.save, null);
     if (saved !== null) el.value = saved;
     grow(el);
     let t = null;
     el.addEventListener('input', () => {
       grow(el);
+      updateCounts();
       clearTimeout(t);
       t = setTimeout(() => { store.set(el.dataset.save, el.value); flagSaved(); }, 400);
     });
   });
 
-  /* ---------- Innehållsmenyn följer läsningen ---------- */
-  const tocLinks = Array.from(document.querySelectorAll('.hafte-toc a'));
-  if (tocLinks.length && 'IntersectionObserver' in window) {
-    const targets = tocLinks
-      .map(a => document.querySelector(a.getAttribute('href')))
-      .filter(Boolean);
-    const spy = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (!e.isIntersecting) return;
-        tocLinks.forEach(a => a.classList.toggle('here', a.getAttribute('href') === '#' + e.target.id));
-      });
-    }, { rootMargin: '-120px 0px -70% 0px' });
-    targets.forEach(t => spy.observe(t));
+  /* ---------- Räknare: "3 av 5 ifyllda" ---------- */
+  function updateCounts() {
+    document.querySelectorAll('[data-count-of]').forEach(el => {
+      const pre = el.dataset.countOf;
+      const all = Array.from(document.querySelectorAll('[data-save^="' + pre + '"]'));
+      const done = all.filter(f => f.value.trim()).length;
+      el.textContent = done + ' av ' + all.length + ' ifyllda';
+      el.classList.toggle('full', done === all.length && all.length > 0);
+    });
   }
+  updateCounts();
 
   /* ---------- Timrar ---------- */
   function beep() {
@@ -118,14 +115,7 @@
       host.classList.toggle('running', running);
       startBtn.textContent = running ? 'Pausa' : 'Starta';
     }
-    function select(i, autostart) {
-      idx = i;
-      remaining = steps[i].min * 60;
-      host.classList.remove('done');
-      stop();
-      paint();
-      if (autostart) start();
-    }
+    function stop() { running = false; clearInterval(tick); }
     function start() {
       if (remaining <= 0) return;
       running = true;
@@ -145,7 +135,14 @@
       }, 200);
       paint();
     }
-    function stop() { running = false; clearInterval(tick); }
+    function select(i, autostart) {
+      idx = i;
+      remaining = steps[i].min * 60;
+      host.classList.remove('done');
+      stop();
+      paint();
+      if (autostart) start();
+    }
 
     host.querySelectorAll('.timer-step').forEach(b => {
       b.addEventListener('click', () => select(+b.dataset.i, true));
@@ -154,6 +151,28 @@
     host.querySelector('[data-act="reset"]').addEventListener('click', () => select(idx, false));
 
     select(0, false);
+  });
+
+  /* ---------- Valbara kort (ämnen, öppna frågor) ---------- */
+  document.querySelectorAll('[data-pick]').forEach(group => {
+    const key = group.dataset.pick;
+    const chosen = store.get(key, '');
+    const cards = Array.from(group.querySelectorAll('.pick'));
+    cards.forEach(c => c.classList.toggle('on', c.dataset.v === chosen));
+    function pick(el) {
+      cards.forEach(c => c.classList.remove('on'));
+      el.classList.add('on');
+      store.set(key, el.dataset.v);
+      flagSaved();
+    }
+    cards.forEach(el => {
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.addEventListener('click', () => pick(el));
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(el); }
+      });
+    });
   });
 
   /* ---------- Mitt träd: de fyra temperamenten ---------- */
@@ -195,8 +214,6 @@
     });
   }
 
-  function tradSave() { store.set('mittTrad', JSON.stringify(tradState)); flagSaved(); }
-
   function totals(p) {
     return TEMPS.map(t => ({ t: t, n: tradState[p][t.key].filter(Boolean).length }));
   }
@@ -227,7 +244,7 @@
             <input type="checkbox" data-t="${t.key}" data-i="${i}" ${tradState[who][t.key][i] ? 'checked' : ''}>
             <span>${item}</span>
           </label>`).join('')}
-        <div class="temp-sum">Summa: <b data-sum="${t.key}">${tradState[who][t.key].filter(Boolean).length}</b></div>
+        <div class="temp-sum">Summa: <b>${tradState[who][t.key].filter(Boolean).length}</b></div>
       </div>`).join('');
 
     const outMe = verdict('me', 'Du');
@@ -248,7 +265,8 @@
     tradHost.querySelectorAll('.temp-item input').forEach(cb => {
       cb.addEventListener('change', () => {
         tradState[who][cb.dataset.t][+cb.dataset.i] = cb.checked;
-        tradSave();
+        store.set('mittTrad', JSON.stringify(tradState));
+        flagSaved();
         tradRender();
       });
     });
@@ -256,200 +274,27 @@
 
   if (tradHost) { tradLoad(); tradRender(); }
 
-  /* ---------- Översättningen: Rosenbergs fyra steg ---------- */
-  const SENTENCES = [
-    'Du kollar ju alltid mobilen när jag pratar med dig.',
-    'Du bryr dig mer om ditt jobb än om oss.',
-    'Vi gör aldrig något roligt tillsammans längre.',
-    'Du tar aldrig initiativ till att göra något åt det.',
-    'Du håller alltid med din mamma och aldrig med mig.',
-    'Du kommer alltid för sent, det är respektlöst.'
-  ];
-  const FEEL_NEG = ['irriterad', 'arg', 'besviken', 'ledsen', 'sårad', 'orolig', 'rädd', 'trött', 'ensam', 'frustrerad', 'maktlös', 'osäker', 'uppgiven', 'avundsjuk', 'skamsen', 'rastlös', 'överväldigad', 'missförstådd'];
-  const FEEL_POS = ['glad', 'tacksam', 'lugn', 'trygg', 'lättad', 'rörd', 'varm', 'stolt', 'hoppfull', 'nyfiken', 'uppmuntrad', 'avspänd', 'nöjd', 'älskad', 'sedd', 'fri', 'förväntansfull'];
-  const NEEDS = ['uppskattning', 'vila', 'trygghet', 'närhet', 'att bli sedd', 'att bli förstådd', 'gemenskap', 'frihet', 'ordning', 'mening', 'stöd', 'respekt', 'tillit', 'ömhet', 'lek', 'stillhet', 'att räknas med'];
-
-  const oversattHost = document.getElementById('oversattWidget');
-
-  function stepFields(prefix) {
-    return `
-      <label class="write">
-        <span class="write-label">1 · Observation <span class="opt">— vad jag faktiskt såg eller hörde, utan tolkning</span></span>
-        <textarea data-save="${prefix}-obs" rows="2" placeholder="”När jag …”"></textarea>
-      </label>
-      <label class="write">
-        <span class="write-label">2 · Känsla <span class="opt">— vad det väcker i mig</span></span>
-        <textarea data-save="${prefix}-kansla" rows="2" placeholder="”… blir jag …”"></textarea>
-      </label>
-      <div class="chips-wrap">
-        <div class="chips-label">Ordbrickor — klicka för att lägga till i känslorutan:</div>
-        <div class="chips" data-into="${prefix}-kansla">${FEEL_NEG.map(w => `<button type="button" class="chip">${w}</button>`).join('')}</div>
-        <details class="lang-detail" style="margin-top:10px; box-shadow:none;">
-          <summary style="padding:12px 16px; font-size:0.9rem;">Känslor när behovet <em>är</em> fyllt</summary>
-          <div class="detail-body" style="padding:0 16px 16px;">
-            <div class="chips" data-into="${prefix}-kansla">${FEEL_POS.map(w => `<button type="button" class="chip">${w}</button>`).join('')}</div>
-          </div>
-        </details>
-      </div>
-      <label class="write">
-        <span class="write-label">3 · Behov <span class="opt">— vad som ligger bakom känslan</span></span>
-        <textarea data-save="${prefix}-behov" rows="2" placeholder="”… för jag behöver …”"></textarea>
-      </label>
-      <div class="chips-wrap">
-        <div class="chips-label">Behov att välja bland:</div>
-        <div class="chips need" data-into="${prefix}-behov">${NEEDS.map(w => `<button type="button" class="chip">${w}</button>`).join('')}</div>
-      </div>
-      <label class="write">
-        <span class="write-label">4 · Önskan <span class="opt">— en konkret, möjlig begäran</span></span>
-        <textarea data-save="${prefix}-onskan" rows="2" placeholder="”Skulle du kunna …?”"></textarea>
-      </label>`;
-  }
-
-  if (oversattHost) {
-    oversattHost.innerHTML = `
-      <p class="write-label">a) Välj en mening att översätta</p>
-      <div class="chips" id="sentChips" style="margin-bottom:14px;">
-        ${SENTENCES.map((s, i) => `<button type="button" class="chip" data-s="${i}">${s}</button>`).join('')}
-      </div>
-      <label class="write" style="margin-top:0">
-        <span class="write-label">Meningen jag översätter</span>
-        <input type="text" data-save="nvc-ex-mening" placeholder="Klicka på en mening ovan — eller skriv en egen.">
-      </label>
-      ${stepFields('nvc-ex')}
-      <div style="border-top:1px dashed var(--line); margin:34px 0 26px;"></div>
-      <p class="write-label">b) Nu en egen sak — något litet som skavt den senaste månaden</p>
-      ${stepFields('nvc-min')}
-      <p class="ex-note">c) Läs upp den för varandra. Den som lyssnar svarar med <strong>en</strong> mening: ”Det jag hör att du behöver är …”</p>`;
-
-    // Fälten skapades efter första genomgången — koppla på sparning och brickor.
-    oversattHost.querySelectorAll('[data-save]').forEach(el => {
-      const saved = store.get(el.dataset.save, null);
-      if (saved !== null) el.value = saved;
-      grow(el);
-      let t = null;
-      el.addEventListener('input', () => {
-        grow(el);
-        clearTimeout(t);
-        t = setTimeout(() => { store.set(el.dataset.save, el.value); flagSaved(); }, 400);
-      });
-    });
-
-    oversattHost.querySelectorAll('#sentChips .chip').forEach(b => {
-      b.addEventListener('click', () => {
-        const input = oversattHost.querySelector('[data-save="nvc-ex-mening"]');
-        input.value = SENTENCES[+b.dataset.s];
-        store.set('nvc-ex-mening', input.value);
-        flagSaved();
-        oversattHost.querySelectorAll('#sentChips .chip').forEach(o => o.style.borderColor = '');
-        b.style.borderColor = 'var(--accent)';
-      });
-    });
-
-    oversattHost.querySelectorAll('.chips[data-into] .chip').forEach(b => {
-      b.addEventListener('click', () => {
-        const target = oversattHost.querySelector('[data-save="' + b.parentElement.dataset.into + '"]');
-        if (!target) return;
-        const word = b.textContent;
-        const cur = target.value.trim();
-        target.value = cur ? (/[.,;:!?]$/.test(cur) ? cur + ' ' + word : cur + ', ' + word) : word;
-        store.set(target.dataset.save, target.value);
-        grow(target);
-        flagSaved();
-        target.focus();
-      });
-    });
-  }
-
-  /* ---------- Sittplikten: ämnen ---------- */
-  const TOPICS = [
-    { t: 'Oss själva och oss två', d: 'Relationens kvalitet · mina ansträngningar och framsteg · mina svagheter · det som är svårt just nu' },
-    { t: 'Våra barn', d: 'Uppfostran · hälsa · karaktär · framsteg · svårigheter' },
-    { t: 'Familj och vänner', d: 'Våra föräldrar · barnbarn · åldrande eller sjuka anhöriga · våra vänner' },
-    { t: 'Yrkeslivet', d: 'Oro · glädjeämnen · besvikelser · kollegor · beslut som väntar' },
-    { t: 'Våra åtaganden', d: 'Vad vi gör · med vilka medel · mot vilka mål · vad det ger och vad det kostar' }
-  ];
-  const topicHost = document.getElementById('sittTopics');
-  if (topicHost) {
-    const chosen = store.get('sitt-amne', '');
-    topicHost.innerHTML = TOPICS.map((o, i) =>
-      `<div class="topic ${chosen === String(i) ? 'on' : ''}" data-i="${i}" role="button" tabindex="0"><strong>${o.t}</strong><span>${o.d}</span></div>`
-    ).join('');
-    function pick(el) {
-      topicHost.querySelectorAll('.topic').forEach(t => t.classList.remove('on'));
-      el.classList.add('on');
-      store.set('sitt-amne', el.dataset.i);
-      flagSaved();
-    }
-    topicHost.querySelectorAll('.topic').forEach(el => {
-      el.addEventListener('click', () => pick(el));
-      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(el); } });
-    });
-  }
-
-  /* ---------- Skriv ut, exportera, rensa ---------- */
-  const printBtn = document.getElementById('printBtn');
-  if (printBtn) printBtn.addEventListener('click', () => window.print());
-
-  const txtBtn = document.getElementById('txtBtn');
-  if (txtBtn) txtBtn.addEventListener('click', () => {
-    const lines = ['BLOMSTRA UPP SOM PAR — våra svar', new Date().toLocaleDateString('sv-SE'), ''];
-
-    if (tradHost) {
-      ['me', 'partner'].forEach(p => {
-        const rows = totals(p);
-        if (!rows.some(r => r.n > 0)) return;
-        lines.push((p === 'me' ? 'MITT TRÄD — jag' : 'MITT TRÄD — min partner'));
-        rows.forEach(r => lines.push('  ' + r.t.name + ': ' + r.n + '/' + r.t.items.length));
-        lines.push('');
-      });
-    }
-
-    document.querySelectorAll('[data-save]').forEach(el => {
-      const val = (el.value || '').trim();
-      if (!val) return;
-      const wrap = el.closest('.write') || el.closest('.write-num');
-      let label = '';
-      if (wrap) {
-        const l = wrap.querySelector('.write-label') || wrap.querySelector('span');
-        if (l) label = l.textContent.replace(/\s+/g, ' ').trim();
-      }
-      lines.push((label ? label + ':' : '') + '\n  ' + val.replace(/\n/g, '\n  '), '');
-    });
-
-    const amne = store.get('sitt-amne', '');
-    if (amne !== '' && TOPICS[+amne]) lines.push('Valt ämne för sittplikten: ' + TOPICS[+amne].t, '');
-
-    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'blomstra-som-par-vara-svar.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  /* ---------- Skriv ut och rensa ---------- */
+  document.querySelectorAll('[data-print]').forEach(b => {
+    b.addEventListener('click', () => window.print());
   });
 
-  const clearBtn = document.getElementById('clearBtn');
-  if (clearBtn) clearBtn.addEventListener('click', () => {
-    if (!confirm('Rensa allt ni skrivit i häftet? Det går inte att ångra.')) return;
-    store.keys().forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
-    document.querySelectorAll('[data-save]').forEach(el => { el.value = ''; grow(el); });
-    if (tradHost) {
-      tradState = { me: {}, partner: {} };
-      tradLoad();
-      tradRender();
-    }
-    document.querySelectorAll('#sittTopics .topic').forEach(t => t.classList.remove('on'));
-    if (note) { note.textContent = 'Rensat.'; note.classList.remove('saved'); }
+  document.querySelectorAll('[data-clear]').forEach(b => {
+    b.addEventListener('click', () => {
+      if (!confirm('Rensa det ni skrivit i övningarna? Det går inte att ångra.')) return;
+      store.keys().forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+      document.querySelectorAll('[data-save]').forEach(el => { el.value = ''; grow(el); });
+      document.querySelectorAll('.pick').forEach(p => p.classList.remove('on'));
+      if (tradHost) { tradState = { me: {}, partner: {} }; tradLoad(); tradRender(); }
+      updateCounts();
+      notes.forEach(n => { n.textContent = 'Rensat.'; n.classList.remove('saved'); });
+    });
   });
-})();
 
-/* Fäll ut alla dragspel när sidan skrivs ut — inget innehåll ska falla bort. */
-(function () {
-  const all = () => document.querySelectorAll('details');
+  /* ---------- Fäll ut alla dragspel vid utskrift ---------- */
   const opened = new Set();
   window.addEventListener('beforeprint', () => {
-    all().forEach(d => { if (!d.open) { opened.add(d); d.open = true; } });
+    document.querySelectorAll('details').forEach(d => { if (!d.open) { opened.add(d); d.open = true; } });
   });
   window.addEventListener('afterprint', () => {
     opened.forEach(d => { d.open = false; });
