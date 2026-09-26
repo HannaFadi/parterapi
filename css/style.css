@@ -205,6 +205,21 @@ p { color: var(--ink-soft); }
   gap: 56px;
   align-items: center;
 }
+/* SEO-rubriken: liten kicker överst. Den emotionella raden nedanför bär tyngden. */
+.hero h1 {
+  font-family: var(--font-body);
+  font-size: clamp(0.92rem, 1.5vw, 1.05rem);
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.005em;
+  color: var(--accent);
+  max-width: 28em;
+  margin-bottom: 20px;
+}
+.hero-tagline {
+  font-size: clamp(2.1rem, 5vw, 3.5rem);
+  max-width: 22em;
+}
 .hero .lede { margin: 22px 0 32px; }
 .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
 .hero-note { font-size: 0.85rem; color: var(--ink-faint); margin-top: 18px; }
