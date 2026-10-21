@@ -17,7 +17,8 @@
      Lägg in enstaka stängda datum i STANGT (formatet 'ÅÅÅÅ-MM-DD'). */
 
   const TILLGANGLIGHET = {
-    5: ['14.00', '16.00']   // fredagar: 14.00–15.30 och 16.00–17.30
+    5: ['14.00', '16.00'],           // fredagar: 14.00–15.30 och 16.00–17.30
+    6: ['10.00', '13.00', '15.00']   // lördagar: 10.00–11.30, 13.00–14.30 och 15.00–16.30
   };
 
   const STANGT = [
