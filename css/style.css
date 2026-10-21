@@ -4,22 +4,26 @@
    ============================================================ */
 
 :root {
-  --bg: #FAF6F0;
-  --bg-alt: #F3ECE2;
-  --surface: #FFFFFF;
-  --ink: #2C2823;
-  --ink-soft: #5C554B;
-  --ink-faint: #6F675C;
-  --accent: #B85C38;
-  --accent-dark: #9A4A2B;
-  --accent-soft: #F5E3DA;
-  --sage: #57654F;
-  --sage-soft: #E7ECE4;
-  --line: #E6DDD1;
+  --bg: #FBF6F3;          /* Warm White – lugn grund */
+  --bg-alt: #DEDFD3;      /* Pale Olive – varannan sektion, lugn att läsa på */
+  --bg-blush: #F6E7E1;    /* Blush Clay – kort på ljusa sektioner */
+  --surface: #FBF6F3;     /* Warm White */
+  --ink: #2F3226;         /* Deep Olive – brödtext */
+  --ink-soft: #3E4133;
+  --ink-faint: #5E6152;
+  --heading: #4F523A;     /* Secret Garden – rubriker, länkar, meny */
+  --green: #4F523A;       /* Secret Garden som yta: meny, hero, citat, CTA */
+  --green-deep: #2F3226;  /* Deep Olive som yta: sidfot */
+  --accent: #A85A43;      /* Terracotta – call-to-action */
+  --accent-dark: #8E4A36;
+  --accent-soft: #F6E7E1;
+  --sage: #7B8070;        /* Dried Thyme – dekor, ikoner, linjer */
+  --sage-soft: #DEDFD3;
+  --line: #E8D8CF;
   --radius: 18px;
   --radius-sm: 12px;
-  --shadow: 0 2px 6px rgba(44, 40, 35, 0.05), 0 18px 40px -18px rgba(44, 40, 35, 0.18);
-  --shadow-soft: 0 1px 3px rgba(44, 40, 35, 0.06);
+  --shadow: 0 2px 6px rgba(47, 50, 38, 0.05), 0 18px 40px -18px rgba(47, 50, 38, 0.18);
+  --shadow-soft: 0 1px 3px rgba(47, 50, 38, 0.06);
   --font-display: "Fraunces", Georgia, serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --maxw: 1120px;
@@ -42,8 +46,10 @@ body {
 
 img { max-width: 100%; display: block; }
 
-a { color: var(--accent-dark); text-decoration: none; }
+a { color: var(--heading); text-decoration: none; }
 a:hover { color: var(--accent-dark); }
+p a, .prose a { text-decoration: underline; text-decoration-color: var(--sage); text-underline-offset: 3px; }
+p a.btn, .prose a.btn { text-decoration: none; }
 
 ::selection { background: var(--accent-soft); }
 
@@ -74,7 +80,7 @@ h1, h2, h3, .display {
   font-weight: 550;
   line-height: 1.15;
   letter-spacing: -0.015em;
-  color: var(--ink);
+  color: var(--heading);
 }
 
 h1 { font-size: clamp(2.3rem, 5.5vw, 3.8rem); }
@@ -95,15 +101,17 @@ p { color: var(--ink-soft); }
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent-dark);
+  color: var(--heading);
   margin-bottom: 14px;
 }
 
 .lede {
-  font-size: 1.2rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 2vw, 1.35rem);
+  font-weight: 400;
   line-height: 1.6;
-  color: var(--ink-soft);
-  max-width: 42em;
+  color: var(--ink);
+  max-width: 34em;
 }
 
 /* ---------- Navigation ---------- */
@@ -111,11 +119,29 @@ p { color: var(--ink-soft); }
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(250, 246, 240, 0.82);
+  background: rgba(251, 246, 243, 0.88);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   backdrop-filter: saturate(180%) blur(18px);
-  border-bottom: 1px solid rgba(230, 221, 209, 0.7);
+  border-bottom: 1px solid var(--line);
 }
+
+/* ---------- Mörka gröna ytor ----------
+   Samma tänk som CTA-bandet och sidfoten: Secret Garden som bakgrund,
+   ljus text och terrakotta som enda knappfärg. Tokens skrivs om lokalt
+   så att allt innanför (länkar, knappar, fokus, mobilmeny) följer med. */
+.nav, .hero, .page-hero, section.dark, .cta-band {
+  --bg: var(--green);
+  --heading: #E9E8DE;
+  --ink: #FBF6F3;
+  --ink-soft: #E8E3D6;
+  --ink-faint: #D2CCB9;
+  --accent-dark: #F2C4B4;
+  --sage: #B5BAA3;
+  --line: rgba(222, 223, 211, 0.2);
+  background: var(--green);
+  color: var(--ink);
+}
+.nav { background: rgba(79, 82, 58, 0.94); }
 
 .nav-inner {
   max-width: var(--maxw);
@@ -158,7 +184,7 @@ p { color: var(--ink-soft); }
   color: var(--ink-soft);
   transition: color 0.18s;
 }
-.nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--ink); }
+.nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--accent-dark); }
 /* Knappen i menyn måste slå .nav-links a, annars ärver den grå brödtextfärg */
 .nav-links a.btn-primary, .nav-links a.btn-primary:hover { color: #fff; }
 
@@ -190,20 +216,21 @@ p { color: var(--ink-soft); }
 .btn-primary {
   background: var(--accent);
   color: #fff;
-  box-shadow: 0 8px 20px -8px rgba(184, 92, 56, 0.55);
+  box-shadow: 0 8px 20px -8px rgba(168, 90, 67, 0.55);
 }
 .btn-primary:hover {
-  background: var(--accent-dark);
+  /* Fast värde: --accent-dark skrivs om till ljusrosa på mörka ytor */
+  background: #93503B;
   color: #fff;
   transform: translateY(-1px);
-  box-shadow: 0 12px 26px -8px rgba(184, 92, 56, 0.6);
+  box-shadow: 0 12px 26px -8px rgba(168, 90, 67, 0.6);
 }
 .btn-secondary {
   background: transparent;
-  color: var(--ink);
-  border: 1.5px solid var(--line);
+  color: var(--heading);
+  border: 1.5px solid var(--sage);
 }
-.btn-secondary:hover { border-color: var(--ink-faint); color: var(--ink); transform: translateY(-1px); }
+.btn-secondary:hover { border-color: var(--heading); color: var(--heading); transform: translateY(-1px); }
 .btn-small { padding: 9px 20px; font-size: 0.88rem; }
 .btn:active { transform: translateY(0) scale(0.98); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
@@ -220,7 +247,7 @@ p { color: var(--ink-soft); }
   top: -220px; right: -180px;
   width: 620px; height: 620px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(184,92,56,0.10) 0%, rgba(184,92,56,0) 68%);
+  background: radial-gradient(circle, rgba(222,223,211,0.10) 0%, rgba(222,223,211,0) 68%);
   pointer-events: none;
 }
 .hero-grid {
@@ -236,7 +263,7 @@ p { color: var(--ink-soft); }
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.005em;
-  color: var(--accent-dark);
+  color: var(--heading);
   max-width: 28em;
   margin-bottom: 20px;
 }
@@ -292,28 +319,28 @@ section.alt { background: var(--bg-alt); }
   border-radius: var(--radius);
   padding: 30px 28px;
   box-shadow: var(--shadow-soft);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
-.card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+/* Ljusa kort på rosa sektioner, rosa kort på ljusa sektioner */
+section:not(.alt) .card, section:not(.alt) .stat { background: var(--bg-blush); border-color: transparent; }
 .card h3 { margin-bottom: 10px; }
 .card p { font-size: 0.95rem; }
 
 .card-icon {
   width: 46px; height: 46px;
   border-radius: 12px;
-  background: var(--accent-soft);
-  color: var(--accent-dark);
+  background: var(--sage-soft);
+  color: var(--heading);
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 18px;
 }
-.card-icon.sage { background: var(--sage-soft); color: var(--sage); }
+section:not(.alt) .card-icon { background: var(--surface); }
 
 /* ---------- Stats ---------- */
 .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 22px;
-  margin-top: 40px;
+  margin-top: 0;
 }
 .stat {
   text-align: center;
@@ -359,7 +386,7 @@ section.alt { background: var(--bg-alt); }
   width: 38px; height: 38px;
   align-items: center; justify-content: center;
   border-radius: 50%;
-  background: var(--ink);
+  background: var(--heading);
   color: var(--bg);
   font-family: var(--font-display);
   font-size: 1.05rem;
@@ -419,7 +446,7 @@ section.alt { background: var(--bg-alt); }
 
 /* ---------- Callout ---------- */
 .callout {
-  background: var(--sage-soft);
+  background: var(--surface);
   border-left: 4px solid var(--sage);
   border-radius: var(--radius-sm);
   padding: 22px 26px;
@@ -428,18 +455,21 @@ section.alt { background: var(--bg-alt); }
 .callout p { font-size: 0.95rem; color: var(--ink); }
 .callout strong { color: var(--ink); }
 
+.callout.olive { background: var(--bg-alt); border-left-color: var(--heading); }
 .callout.warm { background: var(--accent-soft); border-left-color: var(--accent); }
 
 /* ---------- Prose pages ---------- */
 .prose { max-width: 36em; }
 .prose h2 { margin: 52px 0 18px; }
 .prose h3 { margin: 34px 0 12px; }
-.prose p { margin-bottom: 18px; }
-.prose ul, .prose ol { margin: 0 0 18px 24px; color: var(--ink-soft); }
+/* Löptext i serif med luftig radhöjd, samma lugna läsrytm som citatet */
+.prose p, .prose li { font-family: var(--font-display); font-size: 1.125rem; line-height: 1.75; color: var(--ink); }
+.prose p { margin-bottom: 20px; }
+.prose ul, .prose ol { margin: 0 0 20px 24px; color: var(--ink); }
 .prose li { margin-bottom: 8px; }
 .prose li::marker { color: var(--accent); }
 
-.page-hero { padding: 76px 0 30px; }
+.page-hero { padding: 76px 0 64px; }
 .page-hero .lede { margin-top: 18px; }
 
 /* ---------- Booking ---------- */
@@ -465,7 +495,7 @@ section.alt { background: var(--bg-alt); }
   border-bottom: 3px solid transparent;
 }
 .booking-progress span.active { color: var(--accent-dark); border-bottom-color: var(--accent); background: var(--surface); }
-.booking-progress span.done { color: var(--sage); }
+.booking-progress span.done { color: var(--heading); }
 
 .booking-body { padding: 38px 36px 42px; min-height: 460px; }
 
@@ -501,13 +531,15 @@ section.alt { background: var(--bg-alt); }
   font-family: var(--font-body);
   transition: background 0.15s, border-color 0.15s, transform 0.15s;
 }
+.cal-day:not(.available):not(.selected) { opacity: 0.55; }
 .cal-day.available {
   background: var(--sage-soft);
+  border-color: var(--sage);
   color: var(--ink);
   font-weight: 600;
   cursor: pointer;
 }
-.cal-day.available:hover { border-color: var(--sage); transform: scale(1.06); }
+.cal-day.available:hover { border-color: var(--heading); transform: scale(1.06); }
 .cal-day.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
 .cal-legend { display: flex; gap: 20px; margin-top: 18px; font-size: 0.8rem; color: var(--ink-faint); }
 .cal-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; }
@@ -584,7 +616,7 @@ section.alt { background: var(--bg-alt); }
 .field input:focus, .field textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(184, 92, 56, 0.12);
+  box-shadow: 0 0 0 4px rgba(168, 90, 67, 0.12);
 }
 .field textarea { resize: vertical; min-height: 110px; }
 .field .hint { font-size: 0.8rem; color: var(--ink-faint); margin-top: 6px; }
@@ -608,7 +640,7 @@ section.alt { background: var(--bg-alt); }
   width: 74px; height: 74px;
   border-radius: 50%;
   background: var(--sage-soft);
-  color: var(--sage);
+  color: var(--heading);
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 24px;
 }
@@ -725,25 +757,25 @@ details.lang-detail .detail-body strong { color: var(--ink); }
 
 /* ---------- Footer ---------- */
 footer {
-  background: #262019;
-  color: #C9BFB2;
+  background: var(--green-deep);
+  color: #E3DCCB;
   padding: 60px 0 36px;
-  margin-top: 40px;
+  margin-top: 0;
 }
 footer .wrap { display: grid; grid-template-columns: 1.5fr 1fr 1.1fr 1.1fr; gap: 40px; }
 footer h4 { color: #F3ECE2; font-size: 0.95rem; margin-bottom: 16px; font-family: var(--font-body); }
-footer a { color: #C9BFB2; font-size: 0.9rem; }
+footer a { color: #E3DCCB; font-size: 0.9rem; }
 footer a:hover { color: #fff; }
 footer ul { list-style: none; }
 footer li { margin-bottom: 10px; }
-footer p { color: #A89C8C; font-size: 0.88rem; }
+footer p { color: #D2CCB9; font-size: 0.88rem; }
 .footer-note {
   max-width: var(--maxw);
   margin: 40px auto 0;
   padding: 0 24px;
   font-size: 0.82rem;
   line-height: 1.6;
-  color: #A89C8C;
+  color: #D2CCB9;
 }
 .footer-note strong { color: #E7DED2; }
 .footer-bottom {
@@ -752,7 +784,7 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
   padding: 22px 24px 0;
   border-top: 1px solid rgba(255,255,255,0.1);
   font-size: 0.8rem;
-  color: #8A8177;
+  color: #D2CCB9;
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -769,14 +801,15 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
 
 /* ---------- CTA band ---------- */
 .cta-band {
-  background: linear-gradient(135deg, #3A332B 0%, #262019 100%);
+  background: var(--green);
   border-radius: var(--radius);
   padding: 64px 48px;
   text-align: center;
   color: #fff;
 }
-.cta-band h2 { color: #fff; margin-bottom: 14px; }
-.cta-band p { color: #C9BFB2; max-width: 36em; margin: 0 auto 30px; }
+.cta-band h2 { color: var(--bg-alt); margin-bottom: 14px; }
+footer :focus-visible { outline-color: #F2C4B4; }
+.cta-band p { color: #E3DCCB; max-width: 36em; margin: 0 auto 30px; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1060px) {
@@ -803,7 +836,11 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
     display: none;
     box-shadow: var(--shadow);
   }
+  /* Deep Olive så att den öppna menyn skiljer sig från den gröna heron */
+  .nav .nav-links { background: var(--green-deep); }
   .nav-links.open { display: flex; }
+  .nav-toggle[aria-expanded="true"] .ico-open,
+  .nav-toggle[aria-expanded="false"] .ico-close { display: none; }
 }
 
 @media (max-width: 560px) {
@@ -813,6 +850,8 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
   .pay-options { grid-template-columns: 1fr; }
   .result-bar-row { grid-template-columns: 110px 1fr 36px; font-size: 0.8rem; }
   .cta-band { padding: 44px 24px; }
+  .page-hero.compact { padding: 36px 0 28px; }
+  .page-hero.compact .lede { font-size: 1.08rem; }
   section { padding: 56px 0; }
 }
 /* ============================================================
@@ -824,6 +863,7 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
 /* ---------- Teoriblock ---------- */
 .beat { max-width: 44em; margin: 0 0 32px; }
 .beat h3 { margin-bottom: 10px; display: flex; gap: 10px; align-items: baseline; }
+.beat p, .ex-why { font-family: var(--font-display); font-size: 1.06rem; line-height: 1.7; color: var(--ink); }
 .beat p { margin-bottom: 14px; }
 .beat p:last-child { margin-bottom: 0; }
 .beat ul, .beat ol { margin: 0 0 16px 24px; color: var(--ink-soft); font-size: 0.97rem; }
@@ -837,10 +877,10 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
 
 /* Valfri trosdimension */
 .faith-note {
-  background: #FBF7EC; border: 1px dashed #DCCFA8; border-radius: var(--radius-sm);
+  background: var(--bg-blush); border: 1px dashed var(--line); border-radius: var(--radius-sm);
   padding: 16px 20px; margin: 18px 0; max-width: 44em; font-size: 0.92rem; color: var(--ink-soft);
 }
-.faith-note b { display: block; font-size: 0.76rem; letter-spacing: 0.12em; text-transform: uppercase; color: #9C8434; margin-bottom: 6px; font-weight: 700; }
+.faith-note b { display: block; font-size: 0.76rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-dark); margin-bottom: 6px; font-weight: 700; }
 
 /* ---------- Övningskort ---------- */
 .ex {
@@ -861,7 +901,7 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
   background: var(--bg-alt); color: var(--ink-soft);
   border-radius: 999px; padding: 4px 11px;
 }
-.tag.out { background: var(--sage-soft); color: var(--sage); }
+.tag.out { background: var(--sage-soft); color: var(--heading); }
 .ex-why { font-size: 0.97rem; margin: 14px 0 20px; max-width: 42em; }
 .ex-steps { counter-reset: exstep; list-style: none; margin: 0 0 4px; }
 .ex-steps > li {
@@ -897,7 +937,7 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
 .write-num { display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 12px; margin-bottom: 10px; }
 .write-num > span { font-family: var(--font-display); font-size: 1.05rem; color: var(--accent-dark); text-align: right; }
 .count-note { font-size: 0.84rem; font-weight: 600; color: var(--ink-faint); margin-top: 4px; }
-.count-note.full { color: var(--sage); }
+.count-note.full { color: var(--heading); }
 
 /* ---------- Timer ---------- */
 .timer {
@@ -911,7 +951,7 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
   letter-spacing: -0.02em;
 }
 .timer.running .timer-clock { color: var(--accent); }
-.timer.done .timer-clock { color: var(--sage); }
+.timer.done .timer-clock { color: var(--heading); }
 .timer-steps { display: flex; gap: 7px; flex-wrap: wrap; }
 .timer-step {
   font-family: var(--font-body); font-size: 0.82rem; font-weight: 600;
@@ -965,7 +1005,7 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
 /* ---------- Verktygsrad: skriv ut / rensa ---------- */
 .ex-tools { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 26px; padding-top: 20px; border-top: 1px dashed var(--line); }
 .save-note { font-size: 0.82rem; color: var(--ink-faint); }
-.save-note.saved { color: var(--sage); }
+.save-note.saved { color: var(--heading); }
 .btn-ghost {
   font-family: var(--font-body); font-size: 0.85rem; font-weight: 600;
   background: transparent; border: 1px solid var(--line); color: var(--ink-soft);
@@ -1018,7 +1058,7 @@ footer p { color: #A89C8C; font-size: 0.88rem; }
   .page-hero { padding: 0 0 10pt; }
   .beat, .callout, .faith-note, .temp-col, details.lang-detail { break-inside: avoid; }
   .ex {
-    border: 1px solid #bbb; border-left: 3pt solid #B85C38;
+    border: 1px solid #bbb; border-left: 3pt solid #A85A43;
     box-shadow: none; padding: 12pt 14pt; margin: 12pt 0 16pt;
   }
   .ex-head, .ex-steps > li, .write, .write-num { break-inside: avoid; }
