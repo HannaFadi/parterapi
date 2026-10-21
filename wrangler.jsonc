@@ -1,0 +1,13 @@
+// Cloudflare Workers med statiska filer. Sajten serveras direkt från
+// repots rot; .assetsignore håller verktyg och konfig utanför.
+{
+  "name": "mariehanna",
+  "compatibility_date": "2026-10-21",
+  "assets": {
+    "directory": "./",
+    // /priser serveras från priser.html och /priser.html omdirigeras till /priser
+    "html_handling": "auto-trailing-slash",
+    // Okända adresser får 404.html med status 404, inte startsidan
+    "not_found_handling": "404-page"
+  }
+}

@@ -1,0 +1,16 @@
+# Filer i repot som inte är en del av sajten
+.git/
+.gitignore
+.assetsignore
+.wrangler
+wrangler.jsonc
+bin
+.claude
+node_modules
+*.md
+*.docx
+# Lokala arbetsfiler i roten (finns inte i repot, men skulle följa med vid
+# en manuell deploy från den här datorn)
+/*.pdf
+/*.jpeg
+/_forslag*.html

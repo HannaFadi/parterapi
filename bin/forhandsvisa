@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Lokal förhandsvisning som beter sig som Cloudflare Pages.
+"""Lokal förhandsvisning som beter sig som Cloudflare (Workers med statiska filer).
 
 Sajten publiceras utan .html i adresserna, så en vanlig
 `python3 -m http.server` ger 404 på varje länk. Den här servern gör
-samma tre saker som Pages: serverar /sida från sida.html, flyttar
+samma tre saker som Cloudflare: serverar /sida från sida.html, flyttar
 /sida.html till /sida, och visar 404.html med rätt statuskod.
 
     bin/forhandsvisa          # http://127.0.0.1:4173
@@ -25,7 +25,7 @@ class Pages(http.server.SimpleHTTPRequestHandler):
     def send_head(self):
         sokvag = urllib.parse.urlsplit(self.path).path
 
-        # /sida.html -> /sida, precis som Pages gör (308)
+        # /sida.html -> /sida, precis som Cloudflare gör
         if sokvag.endswith(".html") and posixpath.basename(sokvag) != "404.html":
             mal = sokvag[: -len(".html")]
             if posixpath.basename(mal) == "index":

@@ -1,12 +1,12 @@
-# Svarsrubriker för Cloudflare Pages.
-# Pages sätter redan Referrer-Policy, X-Content-Type-Options och Etag,
-# och sköter cachningen själv. Rör inte Cache-Control här: enligt
-# Cloudflares egen dokumentation kan egen cachning ge gammalt innehåll
-# efter en ny driftsättning.
+# Svarsrubriker för Cloudflare Workers (statiska filer).
+# Cachningen sköts av Cloudflare. Rör inte Cache-Control här: egen
+# cachning kan ge gammalt innehåll efter en ny driftsättning.
 
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
   Cross-Origin-Opener-Policy: same-origin
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
   # script-src tillåter 'unsafe-inline' därför att sidorna har två sorters
