@@ -16,3 +16,6 @@ Texterna på mariehanna.se.docx
 
 # Wranglers lokala cache
 .wrangler
+
+# Lokala hemligheter för wrangler dev
+.dev.vars*

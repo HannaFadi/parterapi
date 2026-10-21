@@ -1,13 +1,38 @@
-// Cloudflare Workers med statiska filer. Sajten serveras direkt från
-// repots rot; .assetsignore håller verktyg och konfig utanför.
+// Cloudflare Worker: statiska filer från repots rot, plus ett litet API
+// under /api för bokning och betalning. .assetsignore håller verktyg,
+// källkod och konfig utanför publiceringen.
 {
   "name": "mariehanna",
+  "main": "src/worker.js",
   "compatibility_date": "2026-10-21",
   "assets": {
     "directory": "./",
+    "binding": "ASSETS",
     // /priser serveras från priser.html och /priser.html omdirigeras till /priser
     "html_handling": "auto-trailing-slash",
     // Okända adresser får 404.html med status 404, inte startsidan
-    "not_found_handling": "404-page"
-  }
+    "not_found_handling": "404-page",
+    // Bara API:t går via Workern; allt annat serveras direkt som fil
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mariehanna-bokningar",
+      "database_id": "7fdaf4db-be7f-41ee-8740-cf64815be5a5"
+    }
+  ],
+  // Bokningsmejl. Utan registrerad avsändardomän går det bara att skicka
+  // till verifierade adresser (Marie); mejlet till paret skickas när
+  // mariehanna.se är registrerad för Email Sending.
+  "send_email": [{ "name": "EMAIL" }],
+  "vars": {
+    "SAJT_URL": "https://mariehanna.mariecuchet.workers.dev",
+    "PRIS_ORE": "45000",
+    // Betalsätt i Stripe Checkout. Swish måste vara aktiverat i Stripe.
+    "BETALSATT": "card,swish",
+    "MARIE_EPOST": "mariecuchet@gmail.com",
+    "AVSANDARE": "bokning@mariehanna.se"
+  },
+  "observability": { "enabled": true }
 }

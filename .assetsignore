@@ -14,3 +14,10 @@ node_modules
 /*.pdf
 /*.jpeg
 /_forslag*.html
+
+# Workerns källkod, databasschema och lokala hemligheter
+src
+migrations
+package.json
+package-lock.json
+.dev.vars*

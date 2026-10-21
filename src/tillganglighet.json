@@ -1,0 +1,10 @@
+{
+  "_om": "Maries bokningsbara tider. Nyckel = veckodag (0 = söndag, 5 = fredag, 6 = lördag), värde = starttider. Varje samtal är 90 minuter. stangt = enstaka stängda datum (ÅÅÅÅ-MM-DD). Läses av både kalendern och servern.",
+  "veckodagar": {
+    "5": ["14.00", "16.00"],
+    "6": ["09.00", "11.00"]
+  },
+  "stangt": [],
+  "veckorFramat": 8,
+  "samtalMinuter": 90
+}

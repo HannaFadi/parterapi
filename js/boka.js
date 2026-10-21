@@ -1,40 +1,20 @@
-// Bokningsflöde: kalender → tid → formulär → skicka förfrågan.
-// Ingen server: paret väljer en tid ur Maries angivna tillgänglighet och
-// skickar en FÖRFRÅGAN som förifyllt e-postmeddelande. Tiden är bokad
-// först när Marie har svarat. Flödet säger det rakt ut i varje steg.
+// Bokningsflöde: kalender → tid → formulär → betalning.
+// Maries schema och redan tagna tider hämtas från /api/tider (källan är
+// src/tillganglighet.json). Vid betalning reserverar servern tiden och
+// skickar paret till Stripe Checkout (Swish eller kort); tiden är bokad
+// när betalningen gått igenom.
 
 (function () {
   const body = document.getElementById('bookingBody');
   if (!body) return;
 
-  /* ══════════════════════════════════════════════════════════════════
-     MARIES TILLGÄNGLIGHET — det här är det enda som behöver ändras
-     ══════════════════════════════════════════════════════════════════
-     Nyckel = veckodag (0 = söndag, 1 = måndag … 5 = fredag, 6 = lördag).
-     Värde  = listan med starttider. Varje samtal är 90 minuter, så
-              '14.00' betyder 14.00–15.30.
-     Ta bort en dag helt genom att radera raden.
-     Lägg in enstaka stängda datum i STANGT (formatet 'ÅÅÅÅ-MM-DD'). */
-
-  const TILLGANGLIGHET = {
-    5: ['14.00', '16.00'],           // fredagar: 14.00–15.30 och 16.00–17.30
-    6: ['10.00', '13.00', '15.00']   // lördagar: 10.00–11.30, 13.00–14.30 och 15.00–16.30
-  };
-
-  const STANGT = [
-    // '2026-12-25',
-  ];
-
-  /* Adress till bokningstjänsten. Lämnas tom tills servern finns:
-     då hämtas inga upptagna tider och förfrågan skickas som e-post.
-     När servern är på plats, sätt t.ex. 'https://api.mariehanna.se'. */
-  const API_BAS = '';
-
-  const VECKOR_FRAMAT = 8;          // hur långt fram kalendern går
   const SAMTAL_MINUTER = 90;
   const BOOKING_EMAIL = 'kontakt@mariehanna.se';
-  const SWISH_NUMBER = '073-983 07 66';
-  /* ════════════════════════════════════════════════════════════════ */
+
+  // Fylls av hamtaTider()
+  let TILLGANGLIGHET = {};
+  let STANGT = [];
+  let VECKOR_FRAMAT = 8;
 
   const MONTHS = ['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
   const DOW = ['Mån','Tis','Ons','Tor','Fre','Lör','Sön'];
@@ -59,13 +39,17 @@
     form: {}
   };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() + VECKOR_FRAMAT * 7);
+  let today, maxDate;
+  function satDatumgranser(idagIso) {
+    // Serverns "i dag" i Stockholm, så att kalendern och servern är överens
+    today = idagIso ? new Date(idagIso + 'T00:00:00') : new Date();
+    today.setHours(0, 0, 0, 0);
+    maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + VECKOR_FRAMAT * 7);
+  }
 
   // Öppna på första månaden som faktiskt har en ledig dag, annars innevarande
-  (function valjStartmanad() {
+  function valjStartmanad() {
     const d = new Date(today);
     for (let i = 0; i < VECKOR_FRAMAT * 7 + 1; i++) {
       d.setDate(d.getDate() + 1);
@@ -78,7 +62,7 @@
     }
     state.viewYear = today.getFullYear();
     state.viewMonth = today.getMonth();
-  })();
+  }
 
   function isAvailable(d) {
     if (d <= today || d > maxDate) return false;
@@ -87,21 +71,18 @@
     return !!(tider && tider.length);
   }
 
-  /* Tider som redan är bokade, nyckel 'ÅÅÅÅ-MM-DD' → ['14.00', …].
-     Fylls av hamtaUpptagna() när API_BAS är satt. */
+  /* Tider som redan är bokade eller reserverade, nyckel 'ÅÅÅÅ-MM-DD' → ['14.00', …]. */
   let upptagna = {};
 
-  async function hamtaUpptagna() {
-    if (!API_BAS) return;
-    try {
-      const svar = await fetch(API_BAS + '/tider', { headers: { 'Accept': 'application/json' } });
-      if (!svar.ok) return;
-      const data = await svar.json();
-      if (data && typeof data === 'object') upptagna = data;
-    } catch (e) {
-      /* Nätverksfel: kalendern visar alla tider och Marie får dubbletten
-         i mejl i stället — bättre än en kalender som vägrar visas. */
-    }
+  async function hamtaTider() {
+    const svar = await fetch('/api/tider', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+    if (!svar.ok) throw new Error('HTTP ' + svar.status);
+    const data = await svar.json();
+    TILLGANGLIGHET = data.veckodagar || {};
+    STANGT = data.stangt || [];
+    VECKOR_FRAMAT = data.veckorFramat || VECKOR_FRAMAT;
+    upptagna = data.upptagna || {};
+    return data;
   }
 
   function slotsFor(d) {
@@ -240,16 +221,16 @@
         <div class="form-row">
           <div class="field">
             <label for="fName">Namn (båda parter) *</label>
-            <input type="text" id="fName" required value="${f.name || ''}" placeholder="Anna & Erik Svensson" autocomplete="name">
+            <input type="text" id="fName" required value="${esc(f.name)}" placeholder="Anna & Erik Svensson" autocomplete="name">
           </div>
           <div class="field">
             <label for="fPhone">Telefon *</label>
-            <input type="tel" id="fPhone" required value="${f.phone || ''}" placeholder="07X-XXX XX XX" autocomplete="tel">
+            <input type="tel" id="fPhone" required value="${esc(f.phone)}" placeholder="07X-XXX XX XX" autocomplete="tel">
           </div>
         </div>
         <div class="field">
           <label for="fEmail">E-post *</label>
-          <input type="email" id="fEmail" required value="${f.email || ''}" placeholder="er@epost.se" autocomplete="email">
+          <input type="email" id="fEmail" required value="${esc(f.email)}" placeholder="er@epost.se" autocomplete="email">
         </div>
         <div class="field">
           <label for="fLang">Språk</label>
@@ -261,26 +242,26 @@
         </div>
         <div class="field">
           <label for="fAbout">Berätta kort om er <span class="opt">(några rader räcker, och ni kan lämna rutan tom)</span></label>
-          <textarea id="fAbout" placeholder="T.ex. hur länge ni varit tillsammans och vad som gör att ni söker parterapi just nu. Det räcker med en mening — resten tar vi i rummet.">${f.about || ''}</textarea>
+          <textarea id="fAbout" placeholder="T.ex. hur länge ni varit tillsammans och vad som gör att ni söker parterapi just nu. Det räcker med en mening — resten tar vi i rummet.">${esc(f.about)}</textarea>
           <p class="hint">Det ni skriver behandlas konfidentiellt och läses bara av mig.</p>
         </div>
 
         <div class="consent-box">
           <h4>Frivilligt: inspelning i utbildningssyfte</h4>
           <p>Som en del av min utbildning till certifierad EFT-terapeut kan samtal ibland filmas eller ljudinspelas, för att sedan gås igenom tillsammans med min handledare. <strong>Detta är helt frivilligt</strong> — ert svar påverkar varken pris, bemötande eller er möjlighet att gå i terapi, och ni kan när som helst ändra er.</p>
-          <p>Inspelningar lagras krypterat, delas aldrig utanför handledningen, och raderas senast när utbildningen är avslutad. Läs mer i <a href="integritet.html" target="_blank">integritetspolicyn</a>.</p>
+          <p>Inspelningar lagras krypterat, delas aldrig utanför handledningen, och raderas senast när utbildningen är avslutad. Läs mer i <a href="/integritet" target="_blank">integritetspolicyn</a>.</p>
           <label class="check-row"><input type="radio" name="consent" value="ja" ${f.consent === 'ja' ? 'checked' : ''}> Ja, vi kan tänka oss att samtal spelas in i utbildningssyfte</label>
           <label class="check-row"><input type="radio" name="consent" value="nej" ${f.consent === 'nej' || !f.consent ? 'checked' : ''}> Nej tack, vi vill inte bli inspelade</label>
         </div>
 
         <label class="check-row" style="margin-bottom: 26px;">
           <input type="checkbox" id="fGdpr" required>
-          <span>Jag godkänner att mina uppgifter behandlas enligt <a href="integritet.html" target="_blank">integritetspolicyn</a> för att hantera bokningen. *</span>
+          <span>Jag godkänner att mina uppgifter behandlas enligt <a href="/integritet" target="_blank">integritetspolicyn</a> för att hantera bokningen. *</span>
         </label>
 
         <div class="booking-actions">
           <button type="button" class="btn btn-secondary" id="backBtn">‹ Ändra tid</button>
-          <button type="submit" class="btn btn-primary">Granska och skicka förfrågan ›</button>
+          <button type="submit" class="btn btn-primary">Granska och gå till betalning ›</button>
         </div>
       </form>`;
 
@@ -308,76 +289,79 @@
     };
   }
 
-  /* ---------- Steg 4: Bekräftelse ---------- */
-  function renderConfirm() {
+  /* ---------- Steg 4: Granska och betala ---------- */
+  function renderConfirm(felmeddelande) {
     const f = state.form;
-    const subject = encodeURIComponent(`Bokningsförfrågan: parsamtal ${fmtDate(state.date)} kl. ${state.time}`);
-    const bodyTxt = encodeURIComponent(
-      `Hej Marie,\n\nVi vill boka ett parsamtal.\n\n` +
-      `Datum: ${fmtDate(state.date)}\nTid: kl. ${tidSpann(state.time)} (90 min)\n` +
-      `Språk: ${f.lang === 'franska' ? 'Franska' : 'Svenska'}\n\n` +
-      `Namn: ${f.name}\nTelefon: ${f.phone}\nE-post: ${f.email}\n\n` +
-      `Om oss:\n${f.about || '—'}\n\n` +
-      `Inspelning i utbildningssyfte: ${f.consent === 'ja' ? 'Ja, det går bra' : 'Nej tack'}\n`
-    );
-
     body.innerHTML = `
       <div class="confirm-box">
-        <div class="confirm-icon">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-        </div>
-        <h2 style="font-size:1.7rem">Nästan klart — en knapptryckning kvar</h2>
-        <p style="max-width:34em; margin: 12px auto 0;">Er förfrågan är sammanställd men <strong>inte skickad än</strong>. Klicka på knappen nedan så öppnas ett färdigskrivet mejl — skicka det, så svarar jag med en bekräftelse inom en arbetsdag. <strong>Tiden är er först när ni fått mitt svar.</strong></p>
+        <p role="status" class="booking-status">Steg 4 av 4 — granska och betala</p>
+        <h2 style="font-size:1.7rem">Stämmer allt?</h2>
+        <p style="max-width:34em; margin: 12px auto 0;">Ni betalar 450&nbsp;kr med <strong>Swish</strong> eller <strong>kort</strong> hos vår betalpartner Stripe. <strong>Tiden är er så fort betalningen har gått igenom</strong>, och ni får en bekräftelse och ett kvitto via mejl.</p>
 
         <dl class="confirm-details">
           <div><dt>Datum</dt><dd>${fmtDate(state.date)}</dd></div>
           <div><dt>Tid</dt><dd>kl. ${tidSpann(state.time)} (90 min)</dd></div>
-          <div><dt>Namn</dt><dd style="text-transform:none">${f.name}</dd></div>
+          <div><dt>Namn</dt><dd style="text-transform:none">${esc(f.name)}</dd></div>
+          <div><dt>E-post</dt><dd style="text-transform:none">${esc(f.email)}</dd></div>
           <div><dt>Språk</dt><dd>${f.lang === 'franska' ? 'Franska' : 'Svenska'}</dd></div>
-          <div><dt>Pris</dt><dd>450 kr</dd></div>
           <div><dt>Inspelning (frivillig)</dt><dd>${f.consent === 'ja' ? 'Ja' : 'Nej'}</dd></div>
+          <div><dt>Att betala</dt><dd>450 kr</dd></div>
         </dl>
 
-        <a class="btn btn-primary" href="mailto:${BOOKING_EMAIL}?subject=${subject}&body=${bodyTxt}">Skicka förfrågan ✉</a>
-        <p style="font-size:0.88rem; margin-top:16px;">Öppnas inget mejlprogram?
-          <button type="button" class="btn btn-secondary btn-small" id="copyBtn">Kopiera uppgifterna</button>
-          och mejla dem till <a href="mailto:${BOOKING_EMAIL}">${BOOKING_EMAIL}</a>.</p>
+        ${felmeddelande ? `<div class="callout warm" role="alert" style="text-align:left; margin-bottom:20px;"><p>${esc(felmeddelande)}</p></div>` : ''}
 
-        <h3 style="margin: 40px 0 6px;">Betalning</h3>
-        <p style="font-size:0.92rem;">Ni betalar efter varje samtal — välj det som passar er bäst:</p>
-        <div class="pay-options">
-          <div class="pay-option">
-            <span class="swish-logo">Swish</span>
-            <span>Swisha 450 kr efter samtalet till<br><strong>${SWISH_NUMBER}</strong></span>
-          </div>
-          <div class="pay-option">
-            <strong>💳 Kort</strong>
-            <span>Betala med bank- eller kreditkort på plats</span>
-          </div>
+        <button type="button" class="btn btn-primary" id="payBtn">Gå till betalning – 450 kr</button>
+        <p style="font-size:0.88rem; margin-top:14px;"><span class="swish-logo" style="font-size:1rem">Swish</span> eller kort · säker betalning via Stripe</p>
+        <p style="font-size:0.85rem; max-width:34em; margin: 10px auto 0;">Kostnadsfri avbokning fram till 24 timmar före samtalet, då får ni tillbaka hela beloppet. Vid senare avbokning återbetalas halva avgiften.</p>
+
+        <div class="booking-actions" style="justify-content:center; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary btn-small" id="editBtn">‹ Ändra uppgifter</button>
+          <button type="button" class="btn btn-secondary btn-small" id="restartBtn">Välj en annan tid</button>
         </div>
-
-        <button class="btn btn-secondary btn-small" id="restartBtn" style="margin-top: 20px;">Välj en annan tid</button>
       </div>`;
 
-    const copyBtn = document.getElementById('copyBtn');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', async () => {
-        const text = decodeURIComponent(bodyTxt);
-        try {
-          await navigator.clipboard.writeText(text);
-          copyBtn.textContent = 'Kopierat ✓';
-        } catch (e) {
-          const ta = document.createElement('textarea');
-          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-          document.body.appendChild(ta); ta.select();
-          try { document.execCommand('copy'); copyBtn.textContent = 'Kopierat ✓'; }
-          catch (e2) { copyBtn.textContent = 'Markera texten i mejlet i stället'; }
-          document.body.removeChild(ta);
+    const payBtn = document.getElementById('payBtn');
+    payBtn.addEventListener('click', async () => {
+      payBtn.disabled = true;
+      payBtn.textContent = 'Öppnar betalningen …';
+      try {
+        const svar = await fetch('/api/boka', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            datum: iso(state.date),
+            tid: state.time,
+            namn: f.name,
+            epost: f.email,
+            telefon: f.phone,
+            sprak: f.lang,
+            om_oss: f.about,
+            inspelning: f.consent,
+            gdpr: true
+          })
+        });
+        const data = await svar.json().catch(() => ({}));
+        if (svar.ok && data.url) {
+          window.location.href = data.url;
+          return;
         }
-        setTimeout(() => { copyBtn.textContent = 'Kopiera uppgifterna'; }, 4000);
-      });
-    }
+        if (data.upptagen) {
+          // Tiden hann tas: hämta om och låt paret välja en ny
+          try { await hamtaTider(); } catch (e) { /* visa ändå */ }
+          state.time = null;
+          state.step = 2;
+          render();
+          const status = body.querySelector('.booking-status');
+          if (status) status.textContent = data.fel;
+          return;
+        }
+        renderConfirm(data.fel || `Betalningen kunde inte startas. Försök igen, eller mejla ${BOOKING_EMAIL}.`);
+      } catch (e) {
+        renderConfirm(`Ingen kontakt med servern. Kontrollera uppkopplingen och försök igen, eller mejla ${BOOKING_EMAIL}.`);
+      }
+    });
 
+    document.getElementById('editBtn').addEventListener('click', () => { state.step = 3; render(); });
     document.getElementById('restartBtn').addEventListener('click', () => {
       state.step = 1;
       state.date = null;
@@ -386,12 +370,23 @@
     });
   }
 
-  render();
-  // Rita bara om ifall servern faktiskt gav oss upptagna tider — annars
-  // skulle omritningen rulla och flytta fokus direkt vid sidladdning.
-  if (API_BAS) {
-    hamtaUpptagna().then(() => {
-      if (Object.keys(upptagna).length && (state.step === 1 || state.step === 2)) render();
-    });
+  function esc(t) {
+    return String(t || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+
+  /* ---------- Start ---------- */
+  body.innerHTML = '<p class="booking-status" role="status">Hämtar lediga tider …</p>';
+  hamtaTider().then(data => {
+    satDatumgranser(data.idag);
+    valjStartmanad();
+    render();
+    if (new URLSearchParams(location.search).get('avbruten')) {
+      const status = body.querySelector('.cal-head');
+      if (status) status.insertAdjacentHTML('beforebegin',
+        '<p class="booking-status" role="status">Betalningen avbröts och tiden är släppt. Välj gärna en tid igen.</p>');
+    }
+  }).catch(() => {
+    body.innerHTML = `<div class="callout warm" role="alert"><p><strong>Kalendern kunde inte laddas just nu.</strong>
+      Ladda om sidan om en stund, eller mejla <a href="mailto:${BOOKING_EMAIL}">${BOOKING_EMAIL}</a> med ett par tider som passar er.</p></div>`;
+  });
 })();
