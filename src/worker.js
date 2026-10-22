@@ -109,8 +109,8 @@ async function boka(request, env) {
     'payment_intent_data[metadata][bokning]': b.id,
     'custom_text[submit][message]': 'Kostnadsfri avbokning fram till 24 timmar före samtalet. Vid senare avbokning återbetalas halva avgiften.'
   };
-  env.BETALSATT.split(',').map(s => s.trim()).filter(Boolean)
-    .forEach((s, i) => { params[`payment_method_types[${i}]`] = s; });
+  // Betalsätten (kort, Swish) väljs i Stripes panel under Payment methods,
+  // inte här: Stripe tillåter inte längre payment_method_types i Checkout.
 
   const svar = await stripe(env, 'POST', '/v1/checkout/sessions', params);
   if (!svar.ok) {
@@ -172,7 +172,7 @@ async function avbryt(url, env) {
 
 async function webhook(request, env) {
   const kropp = await request.text();
-  if (!(await stripeSignaturOk(kropp, request.headers.get('Stripe-Signature'), env.STRIPE_WEBHOOK_SECRET))) {
+  if (!(await stripeSignaturOk(kropp, request.headers.get('Stripe-Signature'), (env.STRIPE_WEBHOOK_SECRET || '').trim()))) {
     return json({ fel: 'Ogiltig signatur' }, 400);
   }
   const handelse = JSON.parse(kropp);
@@ -271,10 +271,15 @@ async function skicka(env, meddelande) {
 /* ---------- Stripe ---------- */
 
 async function stripe(env, metod, sokvag, params) {
+  const nyckel = (env.STRIPE_SECRET_KEY || '').trim();
+  if (!nyckel) {
+    console.error('STRIPE_SECRET_KEY saknas eller är tom – lägg in den med wrangler secret put');
+    return { ok: false, status: 0, data: { error: { message: 'Ingen Stripe-nyckel' } } };
+  }
   const r = await fetch('https://api.stripe.com' + sokvag, {
     method: metod,
     headers: {
-      'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
+      'Authorization': `Bearer ${nyckel}`,
       'Content-Type': 'application/x-www-form-urlencoded'
     },
     body: metod === 'GET' ? undefined : new URLSearchParams(params)

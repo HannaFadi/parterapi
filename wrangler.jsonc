@@ -34,8 +34,6 @@
   "vars": {
     "SAJT_URL": "https://mariehanna.se",
     "PRIS_ORE": "45000",
-    // Betalsätt i Stripe Checkout. Swish måste vara aktiverat i Stripe.
-    "BETALSATT": "card,swish",
     "MARIE_EPOST": "mariecuchet@gmail.com",
     "AVSANDARE": "bokning@mariehanna.se"
   },
