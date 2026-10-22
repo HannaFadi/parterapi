@@ -104,6 +104,8 @@ async function boka(request, env) {
     'line_items[0][price_data][product_data][name]': beskrivning,
     'line_items[0][price_data][product_data][description]': 'EFT-parterapi med Marie Hanna, Sunnanväg 6D i Lund',
     'payment_intent_data[description]': beskrivning,
+    // Stripe mejlar kvitto till paret oavsett kontots kvittoinställning
+    'payment_intent_data[receipt_email]': b.epost,
     // Bara id:t följer med till Stripe, aldrig det paret skrivit om sig själva
     'metadata[bokning]': b.id,
     'payment_intent_data[metadata][bokning]': b.id,
