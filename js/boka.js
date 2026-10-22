@@ -246,13 +246,6 @@
           <p class="hint">Det ni skriver behandlas konfidentiellt och läses bara av mig.</p>
         </div>
 
-        <div class="consent-box">
-          <h4>Frivilligt: inspelning i utbildningssyfte</h4>
-          <p>Som en del av min utbildning till certifierad EFT-terapeut kan samtal ibland filmas eller ljudinspelas, för att sedan gås igenom tillsammans med min handledare. <strong>Detta är helt frivilligt</strong> — ert svar påverkar varken pris, bemötande eller er möjlighet att gå i terapi, och ni kan när som helst ändra er.</p>
-          <p>Inspelningar lagras krypterat, delas aldrig utanför handledningen, och raderas senast när utbildningen är avslutad. Läs mer i <a href="/integritet" target="_blank">integritetspolicyn</a>.</p>
-          <label class="check-row"><input type="radio" name="consent" value="ja" ${f.consent === 'ja' ? 'checked' : ''}> Ja, vi kan tänka oss att samtal spelas in i utbildningssyfte</label>
-          <label class="check-row"><input type="radio" name="consent" value="nej" ${f.consent === 'nej' || !f.consent ? 'checked' : ''}> Nej tack, vi vill inte bli inspelade</label>
-        </div>
 
         <label class="check-row" style="margin-bottom: 26px;">
           <input type="checkbox" id="fGdpr" required>
@@ -278,14 +271,12 @@
 
   function saveForm() {
     const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : (state.form[id] || ''); };
-    const consentEl = document.querySelector('input[name="consent"]:checked');
     state.form = {
       name: get('fName'),
       phone: get('fPhone'),
       email: get('fEmail'),
       about: get('fAbout'),
-      lang: get('fLang') || 'svenska',
-      consent: consentEl ? consentEl.value : 'nej'
+      lang: get('fLang') || 'svenska'
     };
   }
 
@@ -304,7 +295,6 @@
           <div><dt>Namn</dt><dd style="text-transform:none">${esc(f.name)}</dd></div>
           <div><dt>E-post</dt><dd style="text-transform:none">${esc(f.email)}</dd></div>
           <div><dt>Språk</dt><dd>${f.lang === 'franska' ? 'Franska' : 'Svenska'}</dd></div>
-          <div><dt>Inspelning (frivillig)</dt><dd>${f.consent === 'ja' ? 'Ja' : 'Nej'}</dd></div>
           <div><dt>Att betala</dt><dd>450 kr</dd></div>
         </dl>
 
@@ -336,7 +326,6 @@
             telefon: f.phone,
             sprak: f.lang,
             om_oss: f.about,
-            inspelning: f.consent,
             gdpr: true
           })
         });

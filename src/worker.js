@@ -67,7 +67,7 @@ async function boka(request, env) {
     telefon: in_.telefon.trim(),
     sprak: in_.sprak === 'franska' ? 'franska' : 'svenska',
     om_oss: (in_.om_oss || '').trim(),
-    inspelning: in_.inspelning === 'ja' ? 'ja' : 'nej',
+    inspelning: 'nej', // frågan om inspelning är borttagen ur formuläret
     avbryt_nyckel: crypto.randomUUID()
   };
   const nu = sekunder();
@@ -204,6 +204,7 @@ async function markeraBetald(env, id, session) {
     await env.DB.prepare("UPDATE bokningar SET status = 'krock' WHERE id = ?").bind(id).run();
   }
   await mejlaMarie(env, { ...rad, status }, session);
+  await smsaMarie(env, { ...rad, status });
   if (status === 'bokad') await mejlaParet(env, rad);
 }
 
@@ -222,7 +223,6 @@ async function mejlaMarie(env, b, session) {
     `E-post: ${b.epost}`,
     `Telefon: ${b.telefon}`,
     `Språk: ${b.sprak}`,
-    `Inspelning i utbildningssyfte: ${b.inspelning === 'ja' ? 'ja' : 'nej'}`,
     `Betalt: ${(session.amount_total / 100).toFixed(0)} kr (Stripe ${session.payment_intent || session.id})`,
     '',
     'Om oss:',
@@ -257,6 +257,31 @@ async function mejlaParet(env, b) {
     subject: `Bokningsbekräftelse: ${datumText(b.datum)} kl. ${b.tid}`,
     text
   });
+}
+
+/* ---------- SMS (46elks) ---------- */
+
+// Kort avisering till Maries mobil. Bara datum, tid, namn och telefon:
+// det paret skrivit om sig själva står i mejlet, inte i ett sms.
+// Kräver hemligheterna ELKS_API_USER, ELKS_API_PASSWORD och MARIE_SMS
+// (+46…); saknas någon skickas inget sms och bokningen går ändå igenom.
+async function smsaMarie(env, b) {
+  if (!env.ELKS_API_USER || !env.ELKS_API_PASSWORD || !env.MARIE_SMS) return;
+  const forst = b.status === 'krock' ? 'KROCK, återbetala' : 'Ny bokning';
+  const text = `${forst}: ${datumText(b.datum)} kl. ${tidSpann(b.tid)}. ${b.namn}, ${b.telefon}. Detaljer i mejlet.`;
+  try {
+    const r = await fetch('https://api.46elks.com/a1/sms', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + btoa(`${env.ELKS_API_USER.trim()}:${env.ELKS_API_PASSWORD.trim()}`),
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({ from: 'MarieHanna', to: env.MARIE_SMS.trim(), message: text })
+    });
+    if (!r.ok) console.error('SMS kunde inte skickas', r.status, await r.text());
+  } catch (e) {
+    console.error('SMS kunde inte skickas', e && e.message);
+  }
 }
 
 // Ett mejl som inte går iväg får aldrig stoppa en betald bokning:
