@@ -12,8 +12,9 @@
     "html_handling": "auto-trailing-slash",
     // Okända adresser får 404.html med status 404, inte startsidan
     "not_found_handling": "404-page",
-    // Bara API:t går via Workern; allt annat serveras direkt som fil
-    "run_worker_first": ["/api/*"]
+    // Workern körs först på allt: den skickar www och http vidare till
+    // https://mariehanna.se, svarar på /api och lämnar resten till filerna
+    "run_worker_first": true
   },
   // Cloudflare skapar DNS-poster och certifikat för domänerna automatiskt
   "routes": [

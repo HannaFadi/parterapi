@@ -1,6 +1,6 @@
 // Bokningsflöde: kalender → tid → formulär → betalning.
-// Maries schema och redan tagna tider hämtas från /api/tider (källan är
-// src/tillganglighet.json). Vid betalning reserverar servern tiden och
+// Maries schema och redan tagna tider hämtas från /api/tider (Marie
+// redigerar schemat på /admin; src/tillganglighet.json är grundschemat). Vid betalning reserverar servern tiden och
 // skickar paret till Stripe Checkout (Swish eller kort); tiden är bokad
 // när betalningen gått igenom.
 
@@ -13,7 +13,7 @@
 
   // Fylls av hamtaTider()
   let TILLGANGLIGHET = {};
-  let STANGT = [];
+  let UNDANTAG = {};   // 'ÅÅÅÅ-MM-DD' → egna tider den dagen ([] = stängt)
   let VECKOR_FRAMAT = 8;
 
   const MONTHS = ['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
@@ -66,9 +66,12 @@
 
   function isAvailable(d) {
     if (d <= today || d > maxDate) return false;
-    if (STANGT.indexOf(iso(d)) !== -1) return false;
-    const tider = TILLGANGLIGHET[d.getDay()];
-    return !!(tider && tider.length);
+    return tiderFor(d).length > 0;
+  }
+
+  // Ett undantag för datumet går före veckoschemat (samma regel som servern)
+  function tiderFor(d) {
+    return UNDANTAG[iso(d)] || TILLGANGLIGHET[d.getDay()] || [];
   }
 
   /* Tider som redan är bokade eller reserverade, nyckel 'ÅÅÅÅ-MM-DD' → ['14.00', …]. */
@@ -79,14 +82,15 @@
     if (!svar.ok) throw new Error('HTTP ' + svar.status);
     const data = await svar.json();
     TILLGANGLIGHET = data.veckodagar || {};
-    STANGT = data.stangt || [];
+    UNDANTAG = data.undantag || {};
+    (data.stangt || []).forEach(datum => { if (!UNDANTAG[datum]) UNDANTAG[datum] = []; });
     VECKOR_FRAMAT = data.veckorFramat || VECKOR_FRAMAT;
     upptagna = data.upptagna || {};
     return data;
   }
 
   function slotsFor(d) {
-    const alla = TILLGANGLIGHET[d.getDay()] || [];
+    const alla = tiderFor(d);
     const tagna = upptagna[iso(d)] || [];
     return alla.filter(t => tagna.indexOf(t) === -1);
   }

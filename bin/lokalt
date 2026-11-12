@@ -1,0 +1,14 @@
+#!/bin/sh
+# Kör hela sajten lokalt med bokning och adminsida (Worker + lokal databas).
+#
+#   bin/lokalt            # http://127.0.0.1:8787
+#   bin/lokalt 8080
+#
+# Första gången: skapa .dev.vars med ADMIN_LOSENORD=valfritt (och ev.
+# STRIPE_SECRET_KEY i testläge), och kör
+#   npx wrangler d1 migrations apply mariehanna-bokningar --local
+#
+# --infer-origin-from-routes=false låter Workern se localhost i stället för
+# mariehanna.se; annars skickar den varje sida vidare till https-adressen.
+cd "$(dirname "$0")/.." || exit 1
+exec npx -y wrangler@4 dev --infer-origin-from-routes=false --port "${1:-8787}"

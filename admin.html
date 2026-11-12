@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Marie Hanna, Parterapi</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%234F523A'/><circle cx='41' cy='52' r='21' fill='none' stroke='%23A85A43' stroke-width='9'/><circle cx='59' cy='52' r='21' fill='none' stroke='%23F6E7E1' stroke-width='9'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..650&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin">
+
+<header class="admin-top">
+  <div class="wrap">
+    <a href="/" class="brand">Marie Hanna<small>Bokningar och tider</small></a>
+    <button type="button" class="btn btn-secondary btn-small" id="loggaUt" hidden>Logga ut</button>
+  </div>
+</header>
+
+<main id="main" class="wrap admin-main">
+  <noscript><p>Adminsidan kräver JavaScript.</p></noscript>
+
+  <!-- Inloggning -->
+  <section id="vyLogin" class="admin-card admin-login" hidden>
+    <h1>Logga in</h1>
+    <form id="loginForm">
+      <div class="field">
+        <label for="losenord">Lösenord</label>
+        <input type="password" id="losenord" autocomplete="current-password" required>
+      </div>
+      <p class="admin-fel" id="loginFel" role="alert" hidden></p>
+      <button type="submit" class="btn btn-primary">Logga in</button>
+    </form>
+  </section>
+
+  <!-- Inloggad -->
+  <div id="vyAdmin" hidden>
+    <nav class="admin-flikar" aria-label="Avdelningar">
+      <button type="button" data-flik="bokningar" aria-pressed="true">Bokningar</button>
+      <button type="button" data-flik="tider" aria-pressed="false">Mina tider</button>
+    </nav>
+    <p class="admin-fel" id="adminFel" role="alert" hidden></p>
+
+    <section id="flikBokningar">
+      <h1>Bokningar</h1>
+      <div id="kommande"></div>
+      <h2>De närmaste veckorna, tid för tid</h2>
+      <p class="admin-hjalp">Så här ser kalendern ut för paren just nu. Vill du ändra en enstaka dag, tryck på <em>Ändra dagen</em>.</p>
+      <div id="agenda"></div>
+      <details class="admin-tidigare">
+        <summary>Tidigare och avbokade samtal</summary>
+        <div id="tidigare"></div>
+      </details>
+    </section>
+
+    <section id="flikTider" hidden>
+      <h1>Mina tider</h1>
+
+      <div class="admin-card">
+        <h2>Veckoschema</h2>
+        <p class="admin-hjalp">Tiderna som går att boka varje vecka. Ett samtal är 90 minuter, så lägg tiderna minst en och en halv timme isär.</p>
+        <div id="veckoschema"></div>
+      </div>
+
+      <div class="admin-card">
+        <h2>Enstaka dagar</h2>
+        <p class="admin-hjalp">Semester, en helgdag eller en extra dag? Välj datumet här. Det du ställer in för dagen gäller i stället för veckoschemat.</p>
+        <div class="admin-rad">
+          <label for="nyttDatum" class="sr-only">Datum</label>
+          <input type="date" id="nyttDatum">
+          <button type="button" class="btn btn-secondary btn-small" id="laggTillDatum">Lägg till dag</button>
+        </div>
+        <div id="undantag"></div>
+      </div>
+
+      <div class="admin-card">
+        <h2>Hur långt fram går det att boka?</h2>
+        <div class="admin-rad">
+          <label for="veckorFramat">Antal veckor framåt</label>
+          <select id="veckorFramat"></select>
+        </div>
+      </div>
+
+      <div class="admin-spara">
+        <span id="sparaStatus" role="status"></span>
+        <button type="button" class="btn btn-primary" id="spara" disabled>Spara ändringar</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="/js/admin.js"></script>
+</body>
+</html>

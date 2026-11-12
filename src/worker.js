@@ -5,10 +5,26 @@
 //   GET  /api/avbryt          paret avbröt i Checkout: släpp tiden direkt
 //   POST /api/stripe-webhook  Stripe meddelar betald eller utgången session
 //
-// Allt annat är statiska filer och når aldrig den här koden
-// (run_worker_first i wrangler.jsonc).
+// Adminsidan (/admin), bakom lösenordet i hemligheten ADMIN_LOSENORD:
+//   POST /api/admin/login     loggar in och sätter en kaka
+//   POST /api/admin/logout
+//   GET  /api/admin/oversikt  schemat + alla bokningar
+//   PUT  /api/admin/schema    sparar veckoschema och undantag
+//   POST /api/admin/avboka    markerar en bokning som avbokad
+//
+// Allt annat är statiska filer. Workern körs ändå först på varje anrop
+// (run_worker_first i wrangler.jsonc) för att kunna skicka www och http
+// vidare till https://mariehanna.se, så att Google ser en enda adress.
 
-import schema from './tillganglighet.json';
+import grundschema from './tillganglighet.json';
+
+const HUVUDDOMAN = 'mariehanna.se';
+const SAMTAL_MINUTER = grundschema.samtalMinuter || 90;
+const ADMIN_KAKA = 'mh_admin';
+const ADMIN_SESSION_SEK = 30 * 24 * 3600;
+const FORSOK_FONSTER_SEK = 15 * 60;
+const FORSOK_PER_IP = 5;
+const FORSOK_TOTALT = 30;
 
 const RESERVATION_SEK = 31 * 60;  // Stripe kräver minst 30 min för expires_at
 const MARGINAL_SEK = 5 * 60;      // tiden hålls lite längre än sessionen
@@ -18,7 +34,17 @@ const VECKODAGAR = ['söndag','måndag','tisdag','onsdag','torsdag','fredag','l�
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    // En enda adress: www och http går vidare till https://mariehanna.se.
+    // Bara GET/HEAD, så att en webhook aldrig tappar sin kropp i en omdirigering.
+    if ((request.method === 'GET' || request.method === 'HEAD') &&
+        (url.hostname === 'www.' + HUVUDDOMAN || (url.hostname === HUVUDDOMAN && url.protocol === 'http:'))) {
+      return Response.redirect(`https://${HUVUDDOMAN}${url.pathname}${url.search}`, 301);
+    }
+    if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
+
     try {
+      if (url.pathname.startsWith('/api/admin/')) return await admin(request, env, url);
       if (url.pathname === '/api/tider' && request.method === 'GET') return await tider(env);
       if (url.pathname === '/api/boka' && request.method === 'POST') return await boka(request, env);
       if (url.pathname === '/api/avbryt' && request.method === 'GET') return await avbryt(url, env);
@@ -40,11 +66,17 @@ async function tider(env) {
   ).bind(idagStockholm()).all();
   const upptagna = {};
   for (const r of results) (upptagna[r.datum] ||= []).push(r.tid);
+  const schema = await hamtaSchema(env);
+  const idag = idagStockholm();
+  const undantag = {};
+  for (const [datum, tider] of Object.entries(schema.undantag)) if (datum >= idag) undantag[datum] = tider;
   return json({
     veckodagar: schema.veckodagar,
-    stangt: schema.stangt,
+    // Datum med egna tider i stället för veckoschemats; tom lista = stängt
+    undantag,
+    stangt: Object.keys(undantag).filter(d => !undantag[d].length),
     veckorFramat: schema.veckorFramat,
-    idag: idagStockholm(),
+    idag,
     upptagna
   }, 200, { 'Cache-Control': 'no-store' });
 }
@@ -55,7 +87,7 @@ async function boka(request, env) {
   let in_;
   try { in_ = await request.json(); } catch { return json({ fel: 'Ogiltig förfrågan.' }, 400); }
 
-  const fel = valideraBokning(in_);
+  const fel = valideraBokning(in_, await hamtaSchema(env));
   if (fel) return json({ fel }, 400);
 
   const b = {
@@ -125,7 +157,7 @@ async function boka(request, env) {
   return json({ url: svar.data.url });
 }
 
-function valideraBokning(b) {
+function valideraBokning(b, schema) {
   if (!b || typeof b !== 'object') return 'Ogiltig förfrågan.';
   const str = (v, min, max) => typeof v === 'string' && v.trim().length >= min && v.trim().length <= max;
   if (!str(b.namn, 2, 120)) return 'Fyll i era namn.';
@@ -134,18 +166,40 @@ function valideraBokning(b) {
   if (b.om_oss != null && (typeof b.om_oss !== 'string' || b.om_oss.length > 3000)) return 'Presentationen är för lång.';
   if (b.gdpr !== true) return 'Godkänn integritetspolicyn för att boka.';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(b.datum || '') || !/^\d{2}\.\d{2}$/.test(b.tid || '')) return 'Välj datum och tid.';
-  if (!tidFinnsISchemat(b.datum, b.tid)) return 'Den tiden går inte att boka. Välj en annan tid.';
+  if (!tidFinnsISchemat(schema, b.datum, b.tid)) return 'Den tiden går inte att boka. Välj en annan tid.';
   return null;
 }
 
 // Samma regler som kalendern: från i morgon och veckorFramat veckor fram.
-function tidFinnsISchemat(datum, tid) {
+function tidFinnsISchemat(schema, datum, tid) {
   const idag = idagStockholm();
   const max = laggTillDagar(idag, schema.veckorFramat * 7);
   if (datum <= idag || datum > max) return false;
-  if (schema.stangt.includes(datum)) return false;
+  return tiderForDatum(schema, datum).includes(tid);
+}
+
+// Ett undantag för datumet går före veckoschemat.
+function tiderForDatum(schema, datum) {
+  if (schema.undantag[datum]) return schema.undantag[datum];
   const veckodag = new Date(datum + 'T12:00:00Z').getUTCDay();
-  return (schema.veckodagar[veckodag] || []).includes(tid);
+  return schema.veckodagar[veckodag] || [];
+}
+
+// Schemat Marie sparat i adminsidan, annars grundschemat i tillganglighet.json.
+async function hamtaSchema(env) {
+  let sparat = null;
+  try {
+    const rad = await env.DB.prepare("SELECT varde FROM installningar WHERE nyckel = 'schema'").first();
+    if (rad) sparat = JSON.parse(rad.varde);
+  } catch (e) {
+    // Tabellen saknas (migrationen inte körd) eller trasig rad: boka ändå efter grundschemat
+    console.error('Kunde inte läsa schemat, använder grundschemat', e && e.message);
+  }
+  return {
+    veckodagar: (sparat && sparat.veckodagar) || grundschema.veckodagar,
+    undantag: (sparat && sparat.undantag) || Object.fromEntries((grundschema.stangt || []).map(d => [d, []])),
+    veckorFramat: (sparat && sparat.veckorFramat) || grundschema.veckorFramat
+  };
 }
 
 /* ---------- GET /api/avbryt ---------- */
@@ -206,6 +260,192 @@ async function markeraBetald(env, id, session) {
   await mejlaMarie(env, { ...rad, status }, session);
   await smsaMarie(env, { ...rad, status });
   if (status === 'bokad') await mejlaParet(env, rad);
+}
+
+/* ---------- Admin ---------- */
+
+async function admin(request, env, url) {
+  const sokvag = url.pathname.slice('/api/admin/'.length);
+  const metod = request.method;
+  const ingenCache = { 'Cache-Control': 'no-store' };
+
+  // Ändringar tas bara emot från sajtens egna sidor
+  if (metod !== 'GET') {
+    const origin = request.headers.get('Origin');
+    if (origin && origin !== url.origin) return json({ fel: 'Otillåten avsändare.' }, 403, ingenCache);
+  }
+
+  const losenord = (env.ADMIN_LOSENORD || '').trim();
+  if (!losenord) {
+    console.error('ADMIN_LOSENORD saknas – lägg in den med wrangler secret put');
+    return json({ fel: 'Adminsidan är inte aktiverad än.' }, 503, ingenCache);
+  }
+
+  if (sokvag === 'login' && metod === 'POST') return await adminLogin(request, env, losenord);
+  if (sokvag === 'logout' && metod === 'POST') {
+    return json({ ok: true }, 200, { ...ingenCache, 'Set-Cookie': adminKaka('', 0) });
+  }
+
+  if (!(await adminInloggad(request, losenord))) return json({ fel: 'Logga in först.', utloggad: true }, 401, ingenCache);
+
+  if (sokvag === 'oversikt' && metod === 'GET') return await adminOversikt(env);
+  if (sokvag === 'schema' && metod === 'PUT') return await adminSparaSchema(request, env);
+  if (sokvag === 'avboka' && metod === 'POST') return await adminAvboka(request, env);
+  return json({ fel: 'Finns inte' }, 404, ingenCache);
+}
+
+async function adminLogin(request, env, losenord) {
+  const ingenCache = { 'Cache-Control': 'no-store' };
+  const ip = request.headers.get('CF-Connecting-IP') || 'okand';
+  const nu = sekunder();
+  const sedan = nu - FORSOK_FONSTER_SEK;
+
+  const forsok = await env.DB.prepare(
+    'SELECT COUNT(*) AS totalt, COALESCE(SUM(ip = ?), 0) AS fran_ip FROM inloggningsforsok WHERE tid > ?'
+  ).bind(ip, sedan).first();
+  if (forsok.fran_ip >= FORSOK_PER_IP || forsok.totalt >= FORSOK_TOTALT) {
+    return json({ fel: 'För många försök. Vänta en kvart och försök igen.' }, 429, ingenCache);
+  }
+
+  let in_ = {};
+  try { in_ = await request.json(); } catch { /* tom kropp räknas som fel lösenord */ }
+  const angivet = typeof in_.losenord === 'string' ? in_.losenord : '';
+
+  // Jämför HMAC av båda, så att varken längd eller innehåll läcker via tiden
+  const [a, b] = await Promise.all([hmacHex(losenord, 'jamfor:' + angivet), hmacHex(losenord, 'jamfor:' + losenord)]);
+  if (!tidskonstantLika(a, b)) {
+    await env.DB.batch([
+      env.DB.prepare('INSERT INTO inloggningsforsok (ip, tid) VALUES (?, ?)').bind(ip, nu),
+      env.DB.prepare('DELETE FROM inloggningsforsok WHERE tid < ?').bind(nu - 24 * 3600)
+    ]);
+    return json({ fel: 'Fel lösenord.' }, 401, ingenCache);
+  }
+
+  const utgar = nu + ADMIN_SESSION_SEK;
+  const kaka = `${utgar}.${await hmacHex(losenord, 'admin-session:' + utgar)}`;
+  return json({ ok: true }, 200, { ...ingenCache, 'Set-Cookie': adminKaka(kaka, ADMIN_SESSION_SEK) });
+}
+
+// Kakan följer bara med till /api/admin och aldrig från andra sajter.
+function adminKaka(varde, maxAlder) {
+  return `${ADMIN_KAKA}=${varde}; Path=/api/admin; Max-Age=${maxAlder}; HttpOnly; Secure; SameSite=Strict`;
+}
+
+// Kakan är "<utgångstid>.<HMAC av utgångstiden>" med lösenordet som nyckel:
+// byts lösenordet loggas alla ut.
+async function adminInloggad(request, losenord) {
+  const kakor = request.headers.get('Cookie') || '';
+  const traff = kakor.split(';').map(k => k.trim()).find(k => k.startsWith(ADMIN_KAKA + '='));
+  if (!traff) return false;
+  const [utgar, signatur] = traff.slice(ADMIN_KAKA.length + 1).split('.');
+  if (!/^\d+$/.test(utgar || '') || !signatur || Number(utgar) < sekunder()) return false;
+  return tidskonstantLika(signatur, await hmacHex(losenord, 'admin-session:' + utgar));
+}
+
+async function adminOversikt(env) {
+  await slappUtgangna(env);
+  const { results } = await env.DB.prepare(
+    `SELECT id, datum, tid, status, namn, epost, telefon, sprak, om_oss, skapad, bokad
+       FROM bokningar
+      WHERE status IN ('bokad', 'krock', 'avbokad', 'reserverad')
+      ORDER BY datum, tid
+      LIMIT 1000`
+  ).all();
+  return json({
+    idag: idagStockholm(),
+    samtalMinuter: SAMTAL_MINUTER,
+    schema: await hamtaSchema(env),
+    bokningar: results
+  }, 200, { 'Cache-Control': 'no-store' });
+}
+
+async function adminSparaSchema(request, env) {
+  const ingenCache = { 'Cache-Control': 'no-store' };
+  let in_;
+  try { in_ = await request.json(); } catch { return json({ fel: 'Ogiltig förfrågan.' }, 400, ingenCache); }
+  const { schema, fel } = valideraSchema(in_);
+  if (fel) return json({ fel }, 400, ingenCache);
+  await env.DB.prepare(
+    `INSERT INTO installningar (nyckel, varde, andrad) VALUES ('schema', ?, ?)
+     ON CONFLICT (nyckel) DO UPDATE SET varde = excluded.varde, andrad = excluded.andrad`
+  ).bind(JSON.stringify(schema), sekunder()).run();
+  return json({ ok: true, schema }, 200, ingenCache);
+}
+
+// Returnerar ett städat schema eller ett felmeddelande som Marie kan läsa.
+function valideraSchema(in_) {
+  if (!in_ || typeof in_ !== 'object') return { fel: 'Ogiltig förfrågan.' };
+
+  const veckor = Number(in_.veckorFramat);
+  if (!Number.isInteger(veckor) || veckor < 1 || veckor > 26) return { fel: 'Antal veckor framåt ska vara mellan 1 och 26.' };
+
+  const veckodagar = {};
+  if (!in_.veckodagar || typeof in_.veckodagar !== 'object') return { fel: 'Veckoschemat saknas.' };
+  for (const [dag, tider] of Object.entries(in_.veckodagar)) {
+    if (!/^[0-6]$/.test(dag)) return { fel: 'Okänd veckodag i schemat.' };
+    const r = stadaTider(tider, VECKODAGAR[dag] + 'ar');
+    if (r.fel) return { fel: r.fel };
+    if (r.tider.length) veckodagar[dag] = r.tider;
+  }
+
+  const undantag = {};
+  const idag = idagStockholm();
+  const inUndantag = in_.undantag && typeof in_.undantag === 'object' ? in_.undantag : {};
+  if (Object.keys(inUndantag).length > 400) return { fel: 'För många undantag. Ta bort några gamla.' };
+  for (const [datum, tider] of Object.entries(inUndantag)) {
+    if (!giltigtDatum(datum)) return { fel: `Ogiltigt datum: ${datum}` };
+    if (datum < idag) continue; // passerade undantag städas bort
+    const r = stadaTider(tider, datumText(datum));
+    if (r.fel) return { fel: r.fel };
+    undantag[datum] = r.tider;
+  }
+
+  return { schema: { veckodagar, undantag, veckorFramat: veckor } };
+}
+
+// Sorterar, tar bort dubbletter och kräver att samtalen inte överlappar.
+function stadaTider(tider, var_) {
+  if (!Array.isArray(tider) || tider.length > 8) return { fel: `Ogiltiga tider för ${var_}.` };
+  const minuter = [];
+  for (const t of tider) {
+    const m = typeof t === 'string' && /^(\d{2})\.(\d{2})$/.exec(t);
+    if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return { fel: `Ogiltig tid för ${var_}: ${t}` };
+    minuter.push(Number(m[1]) * 60 + Number(m[2]));
+  }
+  const unika = [...new Set(minuter)].sort((a, b) => a - b);
+  for (let i = 1; i < unika.length; i++) {
+    if (unika[i] - unika[i - 1] < SAMTAL_MINUTER) {
+      return { fel: `Tiderna för ${var_} ligger för nära varandra. Ett samtal är ${SAMTAL_MINUTER} minuter.` };
+    }
+  }
+  if (unika.length && unika[unika.length - 1] + SAMTAL_MINUTER > 24 * 60) return { fel: `Sista tiden för ${var_} slutar efter midnatt.` };
+  return { tider: unika.map(x => `${String(Math.floor(x / 60)).padStart(2, '0')}.${String(x % 60).padStart(2, '0')}`) };
+}
+
+function giltigtDatum(datum) {
+  if (typeof datum !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(datum)) return false;
+  const d = new Date(datum + 'T12:00:00Z');
+  return !isNaN(d) && d.toISOString().slice(0, 10) === datum;
+}
+
+// Släpper tiden i kalendern. Pengarna rör den inte: återbetalning gör
+// Marie i Stripe, och paret kontaktar hon själv.
+async function adminAvboka(request, env) {
+  const ingenCache = { 'Cache-Control': 'no-store' };
+  let in_ = {};
+  try { in_ = await request.json(); } catch { /* hanteras nedan */ }
+  if (typeof in_.id !== 'string') return json({ fel: 'Ogiltig förfrågan.' }, 400, ingenCache);
+  const r = await env.DB.prepare("UPDATE bokningar SET status = 'avbokad' WHERE id = ? AND status = 'bokad'").bind(in_.id).run();
+  if (!r.meta.changes) return json({ fel: 'Bokningen finns inte eller är redan avbokad.' }, 404, ingenCache);
+  return json({ ok: true }, 200, ingenCache);
+}
+
+async function hmacHex(hemlighet, text) {
+  const nyckel = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(hemlighet), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', nyckel, new TextEncoder().encode(text)));
+  return [...sig].map(x => x.toString(16).padStart(2, '0')).join('');
 }
 
 /* ---------- E-post ---------- */
@@ -329,11 +569,7 @@ async function stripeSignaturOk(kropp, rubrik, hemlighet) {
   if (!t || !v1.length) return false;
   if (Math.abs(sekunder() - Number(t)) > 300) return false;
 
-  const nyckel = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(hemlighet), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
-  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', nyckel, new TextEncoder().encode(`${t}.${kropp}`)));
-  const vantad = [...sig].map(x => x.toString(16).padStart(2, '0')).join('');
+  const vantad = await hmacHex(hemlighet, `${t}.${kropp}`);
   return v1.some(s => tidskonstantLika(s, vantad));
 }
 
@@ -370,7 +606,7 @@ function datumText(datum) {
 
 function tidSpann(start) {
   const [h, m] = start.split('.').map(Number);
-  const slut = h * 60 + m + (schema.samtalMinuter || 90);
+  const slut = h * 60 + m + SAMTAL_MINUTER;
   return `${start}–${Math.floor(slut / 60)}.${String(slut % 60).padStart(2, '0')}`;
 }
 
