@@ -69,6 +69,51 @@
       </div>
     </div>
 
+    <div class="booking-shell" id="telefonsamtal" style="margin-top: 44px;">
+      <div class="booking-body">
+        <span class="eyebrow">Kostnadsfritt</span>
+        <h2 style="font-size:1.6rem; margin: 6px 0 12px;">Vill ni prata med mig först?</h2>
+        <p style="margin-bottom: 22px;">Det är ett stort steg att boka parterapi hos någon ni aldrig har träffat. Därför bjuder jag på ett telefonsamtal på ungefär en kvart, där ni får ställa era frågor och känna efter om det här är rätt för er. Skicka en förfrågan, så svarar jag via mejl inom en arbetsdag och vi bestämmer en tid att höras.</p>
+
+        <form id="forfraganForm" novalidate>
+          <div class="form-row">
+            <div class="field">
+              <label for="qNamn">Namn *</label>
+              <input type="text" id="qNamn" required minlength="2" maxlength="120" autocomplete="name">
+            </div>
+            <div class="field">
+              <label for="qTelefon">Telefon *</label>
+              <input type="tel" id="qTelefon" required maxlength="30" placeholder="07X-XXX XX XX" autocomplete="tel">
+            </div>
+          </div>
+          <div class="field">
+            <label for="qEpost">E-post *</label>
+            <input type="email" id="qEpost" required maxlength="200" autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="qNar">När passar det att jag ringer? <span class="opt">(valfritt)</span></label>
+            <input type="text" id="qNar" maxlength="300" placeholder="T.ex. vardagar efter kl. 17">
+          </div>
+          <div class="field">
+            <label for="qMeddelande">Något ni vill att jag ska veta? <span class="opt">(valfritt)</span></label>
+            <textarea id="qMeddelande" maxlength="2000" placeholder="En fråga eller ett par rader om er. Det går lika bra att lämna tomt."></textarea>
+            <p class="hint">Det ni skriver behandlas konfidentiellt och läses bara av mig.</p>
+          </div>
+          <div class="field" style="position:absolute; left:-9999px;" aria-hidden="true">
+            <label for="qWebbplats">Lämna det här fältet tomt</label>
+            <input type="text" id="qWebbplats" tabindex="-1" autocomplete="off">
+          </div>
+          <label class="check-row" style="margin-bottom: 22px;">
+            <input type="checkbox" id="qGdpr" required>
+            <span>Jag godkänner att mina uppgifter behandlas enligt <a href="/integritet" target="_blank">integritetspolicyn</a> för att besvara förfrågan. *</span>
+          </label>
+          <div id="forfraganFel" class="callout warm" role="alert" style="margin-bottom:20px;" hidden><p></p></div>
+          <button type="submit" class="btn btn-primary">Skicka förfrågan</button>
+        </form>
+        <noscript><p>Formuläret kräver JavaScript. Mejla i stället <a href="mailto:kontakt@mariehanna.se">kontakt@mariehanna.se</a> med ditt telefonnummer, så hör jag av mig.</p></noscript>
+      </div>
+    </div>
+
     <div class="callout" style="margin-top: 34px;">
       <p><strong>Hellre skriva direkt?</strong> Ni är alltid välkomna att mejla <a href="mailto:kontakt@mariehanna.se">kontakt@mariehanna.se</a> med frågor eller önskemål om tider. Jag svarar normalt inom en arbetsdag. Samtalen hålls på svenska eller franska.</p>
     </div>
@@ -122,5 +167,6 @@
 
 <script src="/js/main.js"></script>
 <script src="/js/boka.js"></script>
+<script src="/js/forfragan.js"></script>
 </body>
 </html>

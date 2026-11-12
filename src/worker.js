@@ -4,6 +4,7 @@
 //   POST /api/boka            reserverar en tid och skapar en Stripe Checkout
 //   GET  /api/avbryt          paret avbröt i Checkout: släpp tiden direkt
 //   POST /api/stripe-webhook  Stripe meddelar betald eller utgången session
+//   POST /api/forfragan       förfrågan om kostnadsfritt telefonsamtal, mejlas till Marie
 //
 // Adminsidan (/admin), bakom lösenordet i hemligheten ADMIN_LOSENORD:
 //   POST /api/admin/login     loggar in och sätter en kaka
@@ -49,6 +50,7 @@ export default {
       if (url.pathname === '/api/boka' && request.method === 'POST') return await boka(request, env);
       if (url.pathname === '/api/avbryt' && request.method === 'GET') return await avbryt(url, env);
       if (url.pathname === '/api/stripe-webhook' && request.method === 'POST') return await webhook(request, env);
+      if (url.pathname === '/api/forfragan' && request.method === 'POST') return await forfragan(request, env, url);
       return json({ fel: 'Finns inte' }, 404);
     } catch (e) {
       console.error('Oväntat fel', url.pathname, e && e.stack || e);
@@ -260,6 +262,61 @@ async function markeraBetald(env, id, session) {
   await mejlaMarie(env, { ...rad, status }, session);
   await smsaMarie(env, { ...rad, status });
   if (status === 'bokad') await mejlaParet(env, rad);
+}
+
+/* ---------- POST /api/forfragan ---------- */
+
+// Ett par vill prata i telefon innan de bokar. Förfrågan sparas inte:
+// den mejlas till Marie, som svarar och bestämmer en tid med paret.
+async function forfragan(request, env, url) {
+  const origin = request.headers.get('Origin');
+  if (origin && origin !== url.origin) return json({ fel: 'Otillåten avsändare.' }, 403);
+
+  let in_;
+  try { in_ = await request.json(); } catch { return json({ fel: 'Ogiltig förfrågan.' }, 400); }
+  if (!in_ || typeof in_ !== 'object') return json({ fel: 'Ogiltig förfrågan.' }, 400);
+
+  // Dolt fält som bara robotar fyller i: svara som vanligt men skicka inget
+  if (in_.webbplats) return json({ ok: true });
+
+  const text = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+  const namn = text(in_.namn, 120);
+  const telefon = text(in_.telefon, 30);
+  const epost = text(in_.epost, 200);
+  const nar = text(in_.nar, 300);
+  const meddelande = text(in_.meddelande, 2000);
+  if (namn.length < 2) return json({ fel: 'Fyll i ditt namn.' }, 400);
+  if (telefon.replace(/\D/g, '').length < 6) return json({ fel: 'Fyll i ett telefonnummer som jag kan nå dig på.' }, 400);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(epost)) return json({ fel: 'Fyll i en giltig e-postadress.' }, 400);
+  if (in_.gdpr !== true) return json({ fel: 'Godkänn integritetspolicyn för att skicka förfrågan.' }, 400);
+
+  const misslyckat = json({ fel: 'Förfrågan kunde inte skickas just nu. Mejla gärna kontakt@mariehanna.se i stället.' }, 502);
+  if (!env.EMAIL) return misslyckat;
+  try {
+    await env.EMAIL.send({
+      to: env.MARIE_EPOST,
+      from: { email: env.AVSANDARE, name: 'Förfrågan mariehanna.se' },
+      replyTo: { email: epost, name: namn },
+      subject: `Förfrågan om telefonsamtal: ${namn}`,
+      text: [
+        'Någon vill ha ett kostnadsfritt telefonsamtal innan de bokar.',
+        'Svara på det här mejlet för att bestämma en tid.\n',
+        `Namn: ${namn}`,
+        `Telefon: ${telefon}`,
+        `E-post: ${epost}`,
+        `Tider som passar: ${nar || '–'}`,
+        '',
+        'Meddelande:',
+        meddelande || '–'
+      ].join('\n')
+    });
+  } catch (e) {
+    // Till skillnad från bokningsmejlen finns förfrågan ingen annanstans:
+    // går mejlet inte iväg måste avsändaren få veta det.
+    console.error('Förfrågan kunde inte mejlas', e && e.code, e && e.message);
+    return misslyckat;
+  }
+  return json({ ok: true });
 }
 
 /* ---------- Admin ---------- */
