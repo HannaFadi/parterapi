@@ -141,9 +141,6 @@ async function boka(request, env) {
     // Stripe mejlar kvitto till paret oavsett kontots kvittoinställning
     'payment_intent_data[receipt_email]': b.epost,
     // Bara id:t följer med till Stripe, aldrig det paret skrivit om sig själva
-    // Par som började till det tidigare priset får en kampanjkod av Marie
-    // (skapas i Stripes panel) och fyller i den här
-    allow_promotion_codes: 'true',
     'metadata[bokning]': b.id,
     'payment_intent_data[metadata][bokning]': b.id,
     'custom_text[submit][message]': 'Kostnadsfri avbokning fram till 24 timmar före samtalet. Vid senare avbokning återbetalas halva avgiften.'
