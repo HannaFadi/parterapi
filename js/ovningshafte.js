@@ -180,7 +180,7 @@
     });
   });
 
-  /* ---------- Mitt träd: de fyra temperamenten ---------- */
+  /* ---------- Mitt temperament: de fyra temperamenten ---------- */
   const TEMPS = [
     { key: 'sang', emoji: '🎆', name: 'Sangviniker', items: [
       'Får energi av människor', 'Skrattar högt och ofta', 'Reagerar direkt', 'Bär inget agg',
