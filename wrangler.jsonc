@@ -34,7 +34,7 @@
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
     "SAJT_URL": "https://mariehanna.se",
-    "PRIS_ORE": "75000",
+    "PRIS_ORE": "95000",
     "MARIE_EPOST": "mariecuchet@gmail.com",
     "AVSANDARE": "bokning@mariehanna.se"
   },

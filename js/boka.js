@@ -220,7 +220,7 @@
     const f = state.form;
     body.innerHTML = `
       <p role="status" class="booking-status">Steg 3 av 4 — berätta kort om er</p>
-      <div class="booking-summary">📅 <strong>${fmtDate(state.date)}</strong> kl. <strong>${tidSpann(state.time)}</strong> · 90 min · 750 kr</div>
+      <div class="booking-summary">📅 <strong>${fmtDate(state.date)}</strong> kl. <strong>${tidSpann(state.time)}</strong> · 90 min · 950 kr</div>
       <form id="bookingForm" novalidate>
         <div class="form-row">
           <div class="field">
@@ -291,7 +291,7 @@
       <div class="confirm-box">
         <p role="status" class="booking-status">Steg 4 av 4 — granska och betala</p>
         <h2 style="font-size:1.7rem">Stämmer allt?</h2>
-        <p style="max-width:34em; margin: 12px auto 0;">Ni betalar 750&nbsp;kr med <strong>Swish</strong> eller <strong>kort</strong> hos vår betalpartner Stripe. <strong>Tiden är er så fort betalningen har gått igenom</strong>, och ni får en bekräftelse och ett kvitto via mejl.</p>
+        <p style="max-width:34em; margin: 12px auto 0;">Ni betalar 950&nbsp;kr med <strong>Swish</strong> eller <strong>kort</strong> hos vår betalpartner Stripe. <strong>Tiden är er så fort betalningen har gått igenom</strong>, och ni får en bekräftelse och ett kvitto via mejl.</p>
 
         <dl class="confirm-details">
           <div><dt>Datum</dt><dd>${fmtDate(state.date)}</dd></div>
@@ -299,12 +299,12 @@
           <div><dt>Namn</dt><dd style="text-transform:none">${esc(f.name)}</dd></div>
           <div><dt>E-post</dt><dd style="text-transform:none">${esc(f.email)}</dd></div>
           <div><dt>Språk</dt><dd>${f.lang === 'franska' ? 'Franska' : 'Svenska'}</dd></div>
-          <div><dt>Att betala</dt><dd>750 kr</dd></div>
+          <div><dt>Att betala</dt><dd>950 kr</dd></div>
         </dl>
 
         ${felmeddelande ? `<div class="callout warm" role="alert" style="text-align:left; margin-bottom:20px;"><p>${esc(felmeddelande)}</p></div>` : ''}
 
-        <button type="button" class="btn btn-primary" id="payBtn">Gå till betalning – 750 kr</button>
+        <button type="button" class="btn btn-primary" id="payBtn">Gå till betalning – 950 kr</button>
         <p style="font-size:0.88rem; margin-top:14px;"><span class="swish-logo" style="font-size:1rem">Swish</span> eller kort · säker betalning via Stripe</p>
         <p style="font-size:0.85rem; max-width:34em; margin: 10px auto 0;">Kostnadsfri avbokning fram till 24 timmar före samtalet, då får ni tillbaka hela beloppet. Vid senare avbokning återbetalas halva avgiften.</p>
 
