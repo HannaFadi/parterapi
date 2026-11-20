@@ -92,6 +92,13 @@ body.admin { background: var(--bg); }
 }
 .admin-rad { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
 .undantag-rad { grid-template-columns: 11.5em 1fr; }
+.admin-main input[type="text"] {
+  font: inherit; padding: 7px 10px; border: 1.5px solid var(--line); border-radius: var(--radius-sm); background: #fff; color: var(--ink);
+}
+.period-rad { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.period-rad:last-child { border-bottom: 0; }
+.period-rad .dag { font-weight: 600; }
+.period-rad .dag small { font-weight: 400; color: var(--ink-faint); margin-left: 6px; }
 
 .admin-spara {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;

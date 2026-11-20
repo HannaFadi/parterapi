@@ -72,6 +72,11 @@ async function tider(env) {
   const idag = idagStockholm();
   const undantag = {};
   for (const [datum, tider] of Object.entries(schema.undantag)) if (datum >= idag) undantag[datum] = tider;
+  // Stängda perioder skickas som stängda dagar inom bokningsfönstret
+  const max = laggTillDagar(idag, schema.veckorFramat * 7);
+  for (const p of schema.perioder) {
+    for (let d = p.fran < idag ? idag : p.fran; d <= p.till && d <= max; d = laggTillDagar(d, 1)) undantag[d] = [];
+  }
   return json({
     veckodagar: schema.veckodagar,
     // Datum med egna tider i stället för veckoschemats; tom lista = stängt
@@ -79,6 +84,8 @@ async function tider(env) {
     stangt: Object.keys(undantag).filter(d => !undantag[d].length),
     veckorFramat: schema.veckorFramat,
     idag,
+    // Tidigaste bokningsbara starttid, 'ÅÅÅÅ-MM-DD TT.MM' (24 timmar framåt)
+    tidigast: tidigastBokbar(),
     upptagna
   }, 200, { 'Cache-Control': 'no-store' });
 }
@@ -172,16 +179,18 @@ function valideraBokning(b, schema) {
   return null;
 }
 
-// Samma regler som kalendern: från i morgon och veckorFramat veckor fram.
+// Samma regler som kalendern: minst 24 timmar framåt och högst veckorFramat veckor fram.
 function tidFinnsISchemat(schema, datum, tid) {
   const idag = idagStockholm();
   const max = laggTillDagar(idag, schema.veckorFramat * 7);
   if (datum <= idag || datum > max) return false;
+  if (`${datum} ${tid}` < tidigastBokbar()) return false;
   return tiderForDatum(schema, datum).includes(tid);
 }
 
-// Ett undantag för datumet går före veckoschemat.
+// En stängd period går före allt, sedan ett undantag för datumet, sist veckoschemat.
 function tiderForDatum(schema, datum) {
+  if (schema.perioder.some(p => p.fran <= datum && datum <= p.till)) return [];
   if (schema.undantag[datum]) return schema.undantag[datum];
   const veckodag = new Date(datum + 'T12:00:00Z').getUTCDay();
   return schema.veckodagar[veckodag] || [];
@@ -200,7 +209,8 @@ async function hamtaSchema(env) {
   return {
     veckodagar: (sparat && sparat.veckodagar) || grundschema.veckodagar,
     undantag: (sparat && sparat.undantag) || Object.fromEntries((grundschema.stangt || []).map(d => [d, []])),
-    veckorFramat: (sparat && sparat.veckorFramat) || grundschema.veckorFramat
+    veckorFramat: (sparat && sparat.veckorFramat) || grundschema.veckorFramat,
+    perioder: (sparat && Array.isArray(sparat.perioder)) ? sparat.perioder : []
   };
 }
 
@@ -457,7 +467,21 @@ function valideraSchema(in_) {
     undantag[datum] = r.tider;
   }
 
-  return { schema: { veckodagar, undantag, veckorFramat: veckor } };
+  // Stängda perioder, t.ex. semester: { fran, till, namn }
+  const perioder = [];
+  const inPerioder = Array.isArray(in_.perioder) ? in_.perioder : [];
+  if (inPerioder.length > 50) return { fel: 'För många stängda perioder. Ta bort några gamla.' };
+  for (const p of inPerioder) {
+    if (!p || !giltigtDatum(p.fran) || !giltigtDatum(p.till)) return { fel: 'Ogiltigt datum i en stängd period.' };
+    if (p.till < p.fran) return { fel: `Perioden ${datumText(p.fran)} slutar innan den börjar.` };
+    if (laggTillDagar(p.fran, 366) < p.till) return { fel: 'En stängd period kan vara högst ett år.' };
+    if (p.till < idag) continue; // passerade perioder städas bort
+    const namn = typeof p.namn === 'string' ? p.namn.trim().slice(0, 60) : '';
+    perioder.push({ fran: p.fran, till: p.till, namn });
+  }
+  perioder.sort((a, b) => a.fran.localeCompare(b.fran));
+
+  return { schema: { veckodagar, undantag, veckorFramat: veckor, perioder } };
 }
 
 // Sorterar, tar bort dubbletter och kräver att samtalen inte överlappar.
@@ -648,6 +672,15 @@ function sekunder() { return Math.floor(Date.now() / 1000); }
 
 function idagStockholm() {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(new Date());
+}
+
+// Stockholmstid om 24 timmar som 'ÅÅÅÅ-MM-DD TT.MM', jämförbar med `${datum} ${tid}`.
+function tidigastBokbar() {
+  const delar = Object.fromEntries(new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Stockholm', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(new Date(Date.now() + 24 * 3600 * 1000)).map(p => [p.type, p.value]));
+  return `${delar.year}-${delar.month}-${delar.day} ${delar.hour}.${delar.minute}`;
 }
 
 function laggTillDagar(datum, dagar) {

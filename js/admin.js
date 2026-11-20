@@ -40,7 +40,17 @@
     const slut = minuter(tid) + samtalMin;
     return `${tid}–${String(Math.floor(slut / 60)).padStart(2, '0')}.${String(slut % 60).padStart(2, '0')}`;
   }
+  function periodFor(iso) {
+    return (schema.perioder || []).find(p => p.fran <= iso && iso <= p.till);
+  }
+  function periodText(p) {
+    const fran = tillDatum(p.fran), till = tillDatum(p.till);
+    const franText = p.fran === p.till ? datumText(p.fran, true)
+      : `${fran.getDate()} ${MANADER[fran.getMonth()]}` + (fran.getFullYear() !== till.getFullYear() ? ` ${fran.getFullYear()}` : '');
+    return storBokstav(p.fran === p.till ? franText : `${franText} – ${till.getDate()} ${MANADER[till.getMonth()]} ${till.getFullYear()}`);
+  }
   function tiderFor(iso) {
+    if (periodFor(iso)) return [];
     return schema.undantag[iso] || schema.veckodagar[tillDatum(iso).getDay()] || [];
   }
 
@@ -114,6 +124,7 @@
     }
     samtalMin = data.samtalMinuter || 90;
     schema = JSON.parse(JSON.stringify(data.schema));
+    schema.perioder ||= [];
     sparatSchema = JSON.stringify(schema);
     $('vyLogin').hidden = true;
     $('vyAdmin').hidden = false;
@@ -127,6 +138,7 @@
     ritaAgenda();
     ritaVeckoschema();
     ritaUndantag();
+    ritaPerioder();
     ritaVeckorFramat();
     uppdateraSpara();
   }
@@ -190,17 +202,32 @@
       if (b.status === 'bokad' || b.status === 'reserverad') (perDag[b.datum] ||= {})[b.tid] = b;
     }
     const rader = [];
+    const visadePerioder = new Set();
     const d = tillDatum(data.idag);
     for (let i = 0; i < schema.veckorFramat * 7; i++) {
       d.setDate(d.getDate() + 1); // går att boka från i morgon
       const iso = tillIso(d);
       const bokade = perDag[iso] || {};
       const tider = [...new Set([...tiderFor(iso), ...Object.keys(bokade)])].sort();
-      const harUndantag = !!schema.undantag[iso];
+      // En stängd period visas som en rad, utom dagar där något redan är bokat
+      const period = periodFor(iso);
+      if (period && !tider.length) {
+        if (!visadePerioder.has(period)) {
+          visadePerioder.add(period);
+          rader.push(h('div', { class: 'agenda-dag' },
+            h('div', { class: 'dag' }, periodText(period), period.namn ? h('small', {}, period.namn) : null),
+            h('div', { class: 'brickor' }, h('span', { class: 'stangt' }, 'Stängt hela perioden')),
+            h('button', { type: 'button', class: 'lank-knapp', onclick: () => visaFlik('tider') }, 'Ändra')));
+        }
+        continue;
+      }
+      const harUndantag = !!schema.undantag[iso] && !period;
       if (!tider.length && !harUndantag) continue;
 
       rader.push(h('div', { class: 'agenda-dag' },
-        h('div', { class: 'dag' }, storBokstav(datumText(iso)), harUndantag ? h('small', {}, 'Egna tider den här dagen') : null),
+        h('div', { class: 'dag' }, storBokstav(datumText(iso)),
+          period ? h('small', {}, 'Stängt' + (period.namn ? ` (${period.namn})` : '') + ', redan bokat ligger kvar')
+            : harUndantag ? h('small', {}, 'Egna tider den här dagen') : null),
         h('div', { class: 'brickor' }, tider.length ? tider.map(t => {
           const b = bokade[t];
           if (!b) return h('span', { class: 'bricka' }, `${tidSpann(t)} · ledig`);
@@ -291,6 +318,42 @@
     if (rad) rad.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 
+  /* ---------- Stängda perioder ---------- */
+
+  function ritaPerioder() {
+    $('perioder').replaceChildren(...schema.perioder.map(p =>
+      h('div', { class: 'period-rad' },
+        h('div', { class: 'dag' }, periodText(p), p.namn ? h('small', {}, p.namn) : null),
+        h('button', { type: 'button', class: 'lank-knapp',
+          onclick: () => { schema.perioder.splice(schema.perioder.indexOf(p), 1); andrat(); } }, 'Öppna igen'))));
+    $('periodFran').min = data.idag;
+    $('periodTill').min = $('periodFran').value || data.idag;
+  }
+
+  $('periodFran').addEventListener('change', () => {
+    if (!$('periodTill').value || $('periodTill').value < $('periodFran').value) $('periodTill').value = $('periodFran').value;
+    $('periodTill').min = $('periodFran').value || data.idag;
+  });
+
+  $('laggTillPeriod').addEventListener('click', () => {
+    const fran = $('periodFran').value;
+    const till = $('periodTill').value || fran;
+    if (!fran) { $('periodFran').focus(); return; }
+    if (till < fran) { alert('Sista dagen kan inte vara före första dagen.'); return; }
+    if (till < data.idag) { alert('Välj datum framåt i tiden.'); return; }
+    const p = { fran, till, namn: $('periodNamn').value.trim().slice(0, 60) };
+    schema.perioder.push(p);
+    schema.perioder.sort((a, b) => a.fran.localeCompare(b.fran));
+    $('periodFran').value = $('periodTill').value = $('periodNamn').value = '';
+    andrat();
+    const bokade = data.bokningar.filter(b => b.status === 'bokad' && b.datum >= fran && b.datum <= till && b.datum >= data.idag);
+    if (bokade.length) {
+      alert(`Obs: ${bokade.length === 1 ? 'ett samtal är' : bokade.length + ' samtal är'} redan bokat i perioden ` +
+        `(${bokade.map(b => `${datumText(b.datum)} kl. ${b.tid}`).join(', ')}). ` +
+        'De ligger kvar. Vill du ställa in dem, avboka under Bokningar och kontakta paret.');
+    }
+  });
+
   function ritaVeckorFramat() {
     const val = $('veckorFramat');
     val.replaceChildren(...[2, 3, 4, 6, 8, 10, 12, 16, 20, 26]
@@ -307,6 +370,7 @@
   function andrat() {
     ritaVeckoschema();
     ritaUndantag();
+    ritaPerioder();
     ritaAgenda();
     uppdateraSpara();
   }

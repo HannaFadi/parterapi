@@ -15,6 +15,7 @@
   let TILLGANGLIGHET = {};
   let UNDANTAG = {};   // 'ÅÅÅÅ-MM-DD' → egna tider den dagen ([] = stängt)
   let VECKOR_FRAMAT = 8;
+  let TIDIGAST = '';   // 'ÅÅÅÅ-MM-DD TT.MM' från servern: bokning kräver 24 timmars framförhållning
 
   const MONTHS = ['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
   const DOW = ['Mån','Tis','Ons','Tor','Fre','Lör','Sön'];
@@ -71,7 +72,9 @@
 
   // Ett undantag för datumet går före veckoschemat (samma regel som servern)
   function tiderFor(d) {
-    return UNDANTAG[iso(d)] || TILLGANGLIGHET[d.getDay()] || [];
+    const dag = iso(d);
+    const alla = UNDANTAG[dag] || TILLGANGLIGHET[d.getDay()] || [];
+    return alla.filter(t => (dag + ' ' + t) >= TIDIGAST);
   }
 
   /* Tider som redan är bokade eller reserverade, nyckel 'ÅÅÅÅ-MM-DD' → ['14.00', …]. */
@@ -86,6 +89,7 @@
     (data.stangt || []).forEach(datum => { if (!UNDANTAG[datum]) UNDANTAG[datum] = []; });
     VECKOR_FRAMAT = data.veckorFramat || VECKOR_FRAMAT;
     upptagna = data.upptagna || {};
+    TIDIGAST = data.tidigast || '';
     return data;
   }
 

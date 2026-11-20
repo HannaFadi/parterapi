@@ -78,6 +78,21 @@
       </div>
 
       <div class="admin-card">
+        <h2>Stängda perioder</h2>
+        <p class="admin-hjalp">Semester eller ledighet? Välj första och sista dagen. Alla tider i perioden försvinner från kalendern. Samtal som redan är bokade ligger kvar tills du avbokar dem.</p>
+        <div class="admin-rad">
+          <label for="periodFran">Från</label>
+          <input type="date" id="periodFran">
+          <label for="periodTill">till och med</label>
+          <input type="date" id="periodTill">
+          <label for="periodNamn" class="sr-only">Anteckning</label>
+          <input type="text" id="periodNamn" maxlength="60" placeholder="T.ex. Semester">
+          <button type="button" class="btn btn-secondary btn-small" id="laggTillPeriod">Stäng perioden</button>
+        </div>
+        <div id="perioder"></div>
+      </div>
+
+      <div class="admin-card">
         <h2>Hur långt fram går det att boka?</h2>
         <div class="admin-rad">
           <label for="veckorFramat">Antal veckor framåt</label>
